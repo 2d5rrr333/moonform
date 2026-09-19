@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>moonform login demo (self-test)</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="vendor/react.js"></script>
+  <script src="vendor/react-dom.js"></script>
+  <script>
+  </script>
+  <script>
+    globalThis.ReactDOMClient = globalThis.ReactDOM;
+  </script>
+  <script src="main.js" defer></script>
+</head>
+<body>
+  <main id="app"></main>
+  <!--
+    Headless self-test harness: after the form mounts, this script drives
+    the exact scenarios from web/README.md (invalid input -> errors shown;
+    valid input -> submit success) and records results in the DOM, so a
+    --dump-dom run can assert them without an automation framework.
+  -->
+  <script>
+    window.__mf_test = async function () {
+      const out = [];
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      await sleep(150);
+      out.push('REACT=' + (typeof globalThis.React !== 'undefined'));
+      out.push('REACTDOM=' + (typeof globalThis.ReactDOM !== 'undefined'));
+      window.__mf_errors = [];
+      window.addEventListener('error', (e) => window.__mf_errors.push(String(e.message)));
+      await sleep(400);
+      out.push('JSERRORS=' + JSON.stringify(window.__mf_errors));
+      out.push('RENDERED=' + JSON.stringify(window.__mf_rendered || 'none'));
+      out.push('CAUGHT=' + JSON.stringify(window.__mf_caught || []));
+      const app = document.getElementById('app');
+      // wait for React to commit (createRoot render is async)
+      for (let i = 0; i < 50 && app && app.childElementCount === 0; i++) {
+        await sleep(100);
+      }
+      out.push('APP_CHILDREN=' + (app ? app.childElementCount : -1));
+      out.push('APP_HTML_LEN=' + (app ? app.innerHTML.length : -1));
+      const $ = (s) => document.querySelector(s);
+      out.push('H2=' + ($('h2') ? $('h2').textContent : 'MISSING'));
+
+      // invalid input, then blur to trigger listeners/validation display
+      // React 18's onChange listens for real user-input commits; synthetic
+      // 'input' events don't flip its internal value tracker. Set the value
+      // through the native value setter, then dispatch input so React's
+      // listener fires with the new value.
+      function setInput(el, text) {
+        const setter = Object.getOwnPropertyDescriptor(
+          window.HTMLInputElement.prototype,
+          'value'
+        ).set;
+        setter.call(el, text);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      const email = $('#email');
+      const pass = $('#password');
+      if (!email || !pass) {
+        out.push('FIELDS=MISSING');
+        document.title = 'test-summary';
+        var pre = document.createElement('pre');
+        pre.id = 'test-summary';
+        pre.textContent = out.join('\n');
+        document.body.appendChild(pre);
+        return;
+      }
+      setInput(email, 'ab');
+      email.dispatchEvent(new Event('blur', { bubbles: true }));
+      await sleep(150);
+      const errsNow = Array.from(document.querySelectorAll('.err'))
+        .map((e) => e.textContent.trim())
+        .filter(Boolean);
+      out.push('INVALID_ERRS=' + JSON.stringify(errsNow));
+      out.push('INVALID_COUNT=' + errsNow.length);
+      out.push('EMAIL_VAL=' + JSON.stringify($('#email').value));
+
+      // valid input
+      setInput(email, 'user@example.com');
+      setInput(pass, 'longenough1');
+      await sleep(150);
+      const errs2 = Array.from(document.querySelectorAll('.err'))
+        .map((e) => e.textContent.trim())
+        .filter(Boolean);
+      out.push('VALID_ERRS=' + JSON.stringify(errs2));
+
+      // submit
+      document.querySelector('form').dispatchEvent(
+        new Event('submit', { bubbles: true, cancelable: true })
+      );
+      await sleep(150);
+      out.push('OK=' + ($('.ok') ? $('.ok').textContent : 'MISSING'));
+
+      var pre = document.createElement('pre');
+      pre.id = 'test-summary';
+      pre.textContent = out.join('\n');
+      document.body.appendChild(pre);
+      document.title = 'test-summary';
+    };
+    window.addEventListener('load', () => {
+      setTimeout(window.__mf_test, 50);
+    });
+  </script>
+</body>
+</html>

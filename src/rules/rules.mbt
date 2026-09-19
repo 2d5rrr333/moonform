@@ -169,6 +169,7 @@ pub fn[V] email(message? : String) -> @core.Validator[String, V] {
   @core.validator(v => if email_ok(v) { [] } else { [msg] })
 }
 
+///|
 fn email_ok(v : String) -> Bool {
   if count_char(v, '@') != 1 {
     return false
@@ -198,6 +199,7 @@ pub fn[V] url(message? : String) -> @core.Validator[String, V] {
   @core.validator(v => if url_ok(v) { [] } else { [msg] })
 }
 
+///|
 fn url_ok(v : String) -> Bool {
   let https_ok = v.has_prefix("https://")
   let http_ok = v.has_prefix("http://")
@@ -220,6 +222,7 @@ fn url_ok(v : String) -> Bool {
   host == "localhost" || count_char(host, '.') >= 1
 }
 
+///|
 fn count_char(s : String, target : Char) -> Int {
   let mut n = 0
   for ch in s {
@@ -230,6 +233,7 @@ fn count_char(s : String, target : Char) -> Int {
   n
 }
 
+///|
 fn find_char_pos(s : String, target : Char) -> Int {
   let mut i = 0
   for ch in s {
@@ -241,6 +245,7 @@ fn find_char_pos(s : String, target : Char) -> Int {
   -1
 }
 
+///|
 fn last_char_pos(s : String, target : Char) -> Int {
   let mut last = -1
   let mut i = 0
@@ -253,6 +258,7 @@ fn last_char_pos(s : String, target : Char) -> Int {
   last
 }
 
+///|
 fn slice_str(s : String, from : Int, until : Int) -> String {
   let buf = StringBuilder()
   let mut i = 0

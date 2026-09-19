@@ -3,6 +3,7 @@ name = "2d5rrr333/moonform"
 version = "0.1.0"
 
 import {
+  "tiye/dom-ffi@0.4.0",
   "tiye/react@0.4.0",
 }
 

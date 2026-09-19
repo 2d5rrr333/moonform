@@ -1,0 +1,11 @@
+import {
+  "2d5rrr333/moonform/core",
+  "2d5rrr333/moonform/rules",
+  "2d5rrr333/moonform/react" @formreact,
+  "tiye/react",
+  "tiye/dom-ffi" @dom,
+}
+
+supported_targets = "js"
+
+pkgtype(kind: "executable")

@@ -1,7 +1,8 @@
 // moonform/react: tiye/react adapter over the core (headless) form.
 //
-// The bridge follows tiye/react's `use_sync_external_store` contract:
-// - subscribe: stable closure returning an unsubscribe function
+// The bridge follows React's `use_sync_external_store` contract:
+// - subscribe(notify): attaches the bridge to the core and calls `notify`
+//   on every relevant core change so React schedules a re-render
 // - get_snapshot: MUST return an Object.is-stable snapshot value between
 //   changes — FieldState snapshots are rebuilt on every core change, and
 //   the adapter caches the last snapshot per field so React sees identity
@@ -28,13 +29,17 @@ pub struct FieldState[A] {
 } derive(Debug)
 
 ///|
-/// Bridge between one core field and React. Create per component (inside
-/// render or setup), call `use_field` from your component.
+/// Bridge between one core field and React. Create once per component
+/// instance (e.g. stored in a ref), drive it via `use_field` /
+/// `use_field_handle`, and wire `set_value` / `blur` into input handlers.
 pub struct FieldBridge[V, A] {
   form : @core.FormApi[V]
   lens : @core.Lens[V, A]
   mut snapshot : FieldState[A]
   mut sub_id : Int?
+  /// React's re-render callback from use_sync_external_store; set by
+  /// `attach_with_notify`, invoked on every core notification.
+  mut notify : (() -> Unit)?
 }
 
 ///|
@@ -42,7 +47,13 @@ pub fn[V, A] FieldBridge::make(
   form : @core.FormApi[V],
   lens : @core.Lens[V, A],
 ) -> FieldBridge[V, A] {
-  { form, lens, snapshot: build_snapshot(form, lens, 0), sub_id: None, }
+  {
+    form,
+    lens,
+    snapshot: build_snapshot(form, lens, 0),
+    sub_id: None,
+    notify: None,
+  }
 }
 
 ///|
@@ -66,11 +77,16 @@ fn[V, A] build_snapshot(
 }
 
 ///|
-/// Refresh the snapshot from the core (bumps rev). Called on every core
+/// Refresh the snapshot from the core (bumps rev) and notify React that
+/// the store changed (schedules a re-render). Called on every core
 /// notification for this field.
 pub fn[V, A] FieldBridge::refresh(self : FieldBridge[V, A]) -> Unit {
   let next_rev = self.snapshot.rev + 1
   self.snapshot = build_snapshot(self.form, self.lens, next_rev)
+  match self.notify {
+    Some(cb) => cb()
+    None => ()
+  }
 }
 
 ///|
@@ -80,8 +96,9 @@ pub fn[V, A] FieldBridge::state(self : FieldBridge[V, A]) -> FieldState[A] {
 }
 
 ///|
-/// Subscribe the bridge to its field's changes (stable handle kept for
-/// unsubscribe on unmount).
+/// Subscribe the bridge to its field's changes WITHOUT a React notify
+/// callback (headless mode; refreshes snapshots only). For React wiring
+/// prefer `attach_with_notify`.
 pub fn[V, A] FieldBridge::attach(self : FieldBridge[V, A]) -> Unit {
   match self.sub_id {
     Some(_) => () // already attached
@@ -97,12 +114,25 @@ pub fn[V, A] FieldBridge::attach(self : FieldBridge[V, A]) -> Unit {
 }
 
 ///|
+/// Subscribe with React's notify callback (use_sync_external_store
+/// contract): every core change refreshes the snapshot AND schedules a
+/// React re-render.
+pub fn[V, A] FieldBridge::attach_with_notify(
+  self : FieldBridge[V, A],
+  notify : () -> Unit,
+) -> Unit {
+  self.notify = Some(notify)
+  self.attach()
+}
+
+///|
 /// Unsubscribe (component unmount).
 pub fn[V, A] FieldBridge::detach(self : FieldBridge[V, A]) -> Unit {
   match self.sub_id {
     Some(id) => {
       self.form.unsubscribe(id)
       self.sub_id = None
+      self.notify = None
     }
     None => ()
   }
