@@ -10,47 +10,72 @@ jobs:
     name: Check (js/wasm/native)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: moonbitlang/setup-moonbit@v1
-      - name: moon check (js)
+      - uses: actions/checkout@v5
+      - name: Install MoonBit toolchain
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+      - name: Update registry index
+        run: moon update
+      - name: Check (js)
         run: moon check --target js
-      - name: moon check (wasm)
+      - name: Check (wasm)
         run: moon check --target wasm
-      - name: moon check (native)
+      - name: Check (native)
         run: moon check --target native
 
   test-js:
     name: Test (js)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: moonbitlang/setup-moonbit@v1
-      - name: moon test
+      - uses: actions/checkout@v5
+      - name: Install MoonBit toolchain
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+      - name: Update registry index
+        run: moon update
+      - name: Test
         run: moon test --target js
 
   test-wasm:
     name: Test (wasm)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: moonbitlang/setup-moonbit@v1
-      - name: moon test
+      - uses: actions/checkout@v5
+      - name: Install MoonBit toolchain
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+      - name: Update registry index
+        run: moon update
+      - name: Test
         run: moon test --target wasm
 
   test-native:
     name: Test (native)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: moonbitlang/setup-moonbit@v1
-      - name: moon test
+      - uses: actions/checkout@v5
+      - name: Install MoonBit toolchain
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+      - name: Update registry index
+        run: moon update
+      - name: Test
         run: moon test --target native
 
   example:
     name: Example (login, headless verification)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: moonbitlang/setup-moonbit@v1
-      - name: run login example
+      - uses: actions/checkout@v5
+      - name: Install MoonBit toolchain
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+      - name: Update registry index
+        run: moon update
+      - name: Run login example
         run: moon run src/examples/login --target js
