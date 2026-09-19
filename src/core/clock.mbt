@@ -1,6 +1,7 @@
 // Spike ②: Clock protocol — capability record (function fields + dispatch methods)
 // NOTE: MoonBit traits are not types (no trait fields/params); a record of
 // functions is the idiomatic injectable-protocol shape.
+
 ///|
 pub struct Clock {
   now : () -> Int
