@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-09-19
+
+### Fixed
+
+- **Stale-index safety for array operations**: after remove/insert/swap,
+  mounted per-element fields whose index no longer exists crashed
+  change-validation dispatch with an uncatchable `Array::at` abort (js).
+  `Lens` gains `try_get` (Option semantics; `at`/`compose` propagate
+  staleness); change/submit validators, change listeners, dirty probes,
+  mount and async validation all read through `try_get` and skip stale
+  slots. Regression tests included.
+- **React adapter notify contract**: `FieldBridge` now calls React's
+  re-render callback on every core notification (`attach_with_notify`;
+  `FieldBridgeHook::subscribe(notify)` matches the external-store
+  contract). Without it, controlled inputs silently reverted to stale
+  snapshots. Verified end-to-end in a real browser (headless Edge,
+  5/5 checks: render, error display, error clearing, submit).
+
+### Added
+
+- `rules`: `email` / `url` pragmatic format rules, `min_int` / `max_int`,
+  `equals`, `must_be_true`, `non_blank`, `numeric`
+- `examples/roster`: dynamic array form demonstrating error migration
+  across remove/push/swap with submit gating (wired into CI)
+- `web/`: browser login demo (tiye/react + React 18.3.1 UMD vendor,
+  self-test harness, headless verification tooling)
+- `ValidationCause` public constructors (mount/change/blur/submit/server)
+  for blackbox callers
+- README installation section, English README, CHANGELOG; upstream/
+  carries the TanStack Form MIT license text
+- CI: GitHub Actions — check (js/wasm/native) + test (js/wasm/native)
+  + examples + browser self-test
+
 ## [0.1.0] - 2026-09-19
 
 Initial release. Behavior semantics baseline: TanStack form-core@1.33.5

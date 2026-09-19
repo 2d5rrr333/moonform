@@ -18,7 +18,7 @@ moon add 2d5rrr333/moonform/rules
 
 ```json
 // moon.mod.json 中出现：
-"deps": { "2d5rrr333/moonform": "0.1.0" }
+"deps": { "2d5rrr333/moonform": "0.1.1" }
 ```
 
 ```json
