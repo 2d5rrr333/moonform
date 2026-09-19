@@ -1,0 +1,74 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "2d5rrr333/moonform/vendor/moonschema/builder"
+
+import {
+  "2d5rrr333/moonform/vendor/moonschema/schema",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn any() -> SchemaBuilder
+
+pub fn array(SchemaBuilder) -> SchemaBuilder
+
+pub fn boolean() -> SchemaBuilder
+
+pub fn enum_(Array[Json]) -> SchemaBuilder
+
+pub fn int() -> SchemaBuilder
+
+pub fn integer() -> SchemaBuilder
+
+pub fn literal(Json) -> SchemaBuilder
+
+pub fn nil() -> SchemaBuilder
+
+pub fn number() -> SchemaBuilder
+
+pub fn object(Map[String, SchemaBuilder]) -> SchemaBuilder
+
+pub fn parse_json(String) -> Json raise @json.ParseError
+
+pub fn str() -> SchemaBuilder
+
+pub fn string() -> SchemaBuilder
+
+// Errors
+
+// Types and methods
+pub struct SchemaBuilder {
+  kw : Map[String, Json]
+  main_type : String?
+  mut item : SchemaBuilder?
+  mut fields : Map[String, SchemaBuilder]?
+  mut optional_ : Bool
+  mut nullable_ : Bool
+  mut strict_ : Bool
+  mut catchall_ : SchemaBuilder?
+  mut rules_ : Array[String]?
+}
+pub fn SchemaBuilder::catchall(Self, Self) -> Self
+pub fn SchemaBuilder::compile(Self, locale? : @schema.Locale) -> @schema.Schema raise @schema.CompileError
+pub fn SchemaBuilder::describe(Self, String) -> Self
+pub fn SchemaBuilder::email(Self) -> Self
+pub fn SchemaBuilder::gt(Self, Double) -> Self
+pub fn SchemaBuilder::ipv4(Self) -> Self
+pub fn SchemaBuilder::lt(Self, Double) -> Self
+pub fn SchemaBuilder::max(Self, Double) -> Self
+pub fn SchemaBuilder::max_items(Self, Int) -> Self
+pub fn SchemaBuilder::max_len(Self, Int) -> Self
+pub fn SchemaBuilder::min(Self, Double) -> Self
+pub fn SchemaBuilder::min_items(Self, Int) -> Self
+pub fn SchemaBuilder::min_len(Self, Int) -> Self
+pub fn SchemaBuilder::multiple_of(Self, Double) -> Self
+pub fn SchemaBuilder::nullable(Self) -> Self
+pub fn SchemaBuilder::optional(Self) -> Self
+pub fn SchemaBuilder::satisfy(Self, String) -> Self
+pub fn SchemaBuilder::strict(Self) -> Self
+pub fn SchemaBuilder::to_schema(Self) -> Json
+pub fn SchemaBuilder::unique_items(Self) -> Self
+pub fn SchemaBuilder::uuid(Self) -> Self
+
+// Type aliases
+
+// Traits

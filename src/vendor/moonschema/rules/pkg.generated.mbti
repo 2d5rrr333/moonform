@@ -1,0 +1,43 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "2d5rrr333/moonform/vendor/moonschema/rules"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn compile_expr(String) -> Expr raise ExprError
+
+pub fn parse_instance(String) -> Json raise @json.ParseError
+
+pub fn rule_holds(Expr, Json) -> Bool
+
+// Errors
+pub(all) suberror ExprError {
+  ExprSyntax(String)
+} derive(Eq)
+pub impl Show for ExprError
+
+// Types and methods
+pub(all) enum Expr {
+  ENum(Double)
+  EStr(String)
+  EBool(Bool)
+  ENull
+  EPath(Array[PathSeg])
+  ENot(Expr)
+  EArith(String, Expr, Expr)
+  ECmp(String, Expr, Expr)
+  ELogic(String, Expr, Expr)
+} derive(Eq)
+
+pub(all) enum PathSeg {
+  PKey(String)
+  PIndex(Int)
+} derive(Eq)
+
+type Token derive(Eq)
+
+// Type aliases
+
+// Traits

@@ -1,0 +1,65 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "2d5rrr333/moonform/vendor/moonschema/schema"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn compile(Json, options? : CompileOptions) -> Schema raise CompileError
+
+pub fn parse(String) -> Json raise @json.ParseError
+
+pub fn summarize(Array[ValidationError]) -> String
+
+// Errors
+pub(all) suberror CompileError {
+  InvalidSchema(String, String)
+  UnsupportedKeyword(String, String)
+} derive(Eq)
+pub impl Show for CompileError
+
+// Types and methods
+pub struct CompileOptions {
+  strict : Bool
+  assert_format : Bool
+  locale : Locale
+} derive(Eq)
+pub fn CompileOptions::new(strict? : Bool, assert_format? : Bool, locale? : Locale) -> Self
+
+type Ctx
+
+pub(all) enum JsonType {
+  JTNull
+  JTBoolean
+  JTObject
+  JTArray
+  JTNumber
+  JTString
+  JTInteger
+} derive(Eq)
+
+pub(all) enum Locale {
+  EN
+  ZH
+} derive(Eq)
+
+type Node
+
+pub struct Schema {
+  node : Node
+  ctx : Ctx
+}
+pub fn Schema::check(Self, Json) -> Bool
+pub fn Schema::validate(Self, Json) -> Array[ValidationError]
+
+pub(all) struct ValidationError {
+  keyword : String
+  instance_path : String
+  schema_path : String
+  message : String
+} derive(Eq, ToJson)
+
+// Type aliases
+
+// Traits

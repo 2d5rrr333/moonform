@@ -1,0 +1,330 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "2d5rrr333/moonform/core"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn[A, V] async_validator((A, Clock, (Array[String]) -> Unit) -> Unit) -> AsyncValidator[A, V]
+
+pub fn[A, V] async_validator_with_form((A, V, Clock, (Array[String]) -> Unit) -> Unit) -> AsyncValidator[A, V]
+
+pub fn[S, A] at(Lens[S, Array[A]], Int) -> Lens[S, A]
+
+pub fn[S, A] field(String, (S) -> A, (S, A) -> S) -> Lens[S, A]
+
+pub fn[S, A : Eq] field_is_dirty(Lens[S, A], S, S) -> Bool
+
+pub fn[S] identity() -> Lens[S, S]
+
+pub fn[A, V] run_sync_validators(ValidationSpec[A, V], ValidationCause, A, V) -> Array[String]?
+
+pub fn[V] submit_handler((V, (SubmitResult) -> Unit) -> Unit) -> SubmitHandler[V]
+
+pub fn[A, V] validator((A) -> Array[String]) -> Validator[A, V]
+
+pub fn[A, V] validator_with_form((A, V) -> Array[String]) -> Validator[A, V]
+
+pub fn[V : Eq] values_equal(V, V) -> Bool
+
+// Errors
+
+// Types and methods
+pub enum AsyncCause {
+  ChangeAsync
+  BlurAsync
+} derive(Eq, @debug.Debug)
+
+pub struct AsyncValidator[A, V] {
+  validate : (A, V, Clock, (Array[String]) -> Unit) -> Unit
+}
+
+pub enum ChangeKind {
+  Value
+  Meta
+} derive(Eq, @debug.Debug)
+pub fn ChangeKind::value_and_meta() -> Array[Self]
+
+pub struct Clock {
+  now : () -> Int
+  schedule : (Int, () -> Unit) -> Int
+  cancel : (Int) -> Unit
+}
+pub fn Clock::cancel(Self, Int) -> Unit
+pub fn Clock::now(Self) -> Int
+pub fn Clock::schedule(Self, Int, () -> Unit) -> Int
+
+pub struct ErrorMap {
+  on_mount : Array[String]?
+  on_change : Array[String]?
+  on_blur : Array[String]?
+  on_submit : Array[String]?
+  on_server : Array[String]?
+} derive(Eq, @debug.Debug)
+pub fn ErrorMap::empty() -> Self
+pub fn ErrorMap::flatten(Self) -> Array[String]
+pub fn ErrorMap::get(Self, ValidationCause) -> Array[String]?
+pub fn ErrorMap::has_errors(Self) -> Bool
+pub fn ErrorMap::set(Self, ValidationCause, Array[String]?) -> Self
+
+pub struct FieldApi[V, A] {
+  form : FormApi[V]
+  lens : Lens[V, A]
+  own_default : A?
+  on_change_l : ((A) -> Unit)?
+  on_blur_l : (() -> Unit)?
+  on_mount_l : (() -> Unit)?
+  on_unmount_l : (() -> Unit)?
+  validation : ValidationSpec[A, V]
+  listen_to : Array[Key]
+  mut mounted : Bool
+  mut mount_token : Int?
+  mut async_seq : Int
+  mut async_validating : Bool
+  mut async_timer : Int?
+}
+pub fn[V, A] FieldApi::abort_async_validation(Self[V, A]) -> Unit
+pub fn[V, A] FieldApi::default_value(Self[V, A]) -> A
+pub fn[V, A] FieldApi::handle_blur(Self[V, A]) -> Unit
+pub fn[V, A] FieldApi::handle_change(Self[V, A], A) -> Unit
+pub fn[V, A : Eq] FieldApi::is_dirty(Self[V, A]) -> Bool
+pub fn[V, A] FieldApi::key(Self[V, A]) -> Key
+pub fn[V, A] FieldApi::meta(Self[V, A]) -> FieldMetaState
+pub fn[V, A : Eq] FieldApi::mount(Self[V, A]) -> Unit
+pub fn[V, A] FieldApi::run_validation(Self[V, A], ValidationCause) -> Unit
+pub fn[V, A] FieldApi::run_validation_against(Self[V, A], ValidationCause, V) -> Unit
+pub fn[V, A] FieldApi::schedule_async_validation(Self[V, A], AsyncCause) -> Unit
+pub fn[V, A] FieldApi::set_value(Self[V, A], A, dont_update_meta? : Bool, dont_run_listeners? : Bool, dont_validate? : Bool) -> Unit
+pub fn[V, A] FieldApi::unmount(Self[V, A]) -> Unit
+pub fn[V, A] FieldApi::value(Self[V, A]) -> A
+
+pub struct FieldMetaState {
+  is_touched : Bool
+  is_blurred : Bool
+  is_validating : Bool
+  is_dirty : Bool
+  error_map : ErrorMap
+  array_version : Int
+} derive(Eq, @debug.Debug)
+pub fn FieldMetaState::default_meta() -> Self
+pub fn FieldMetaState::errors(Self) -> Array[String]
+pub fn FieldMetaState::has_errors(Self) -> Bool
+pub fn FieldMetaState::is_valid(Self) -> Bool
+pub fn FieldMetaState::with_cause_errors(Self, ValidationCause, Array[String]?) -> Self
+
+pub(all) struct FieldReg[V] {
+  token : Int
+  apply_default : ((V) -> V)?
+  probe_dirty : (V, V) -> Bool
+  on_change : ((V) -> Unit)?
+  validate_on_change : ((V) -> Unit)?
+}
+
+pub struct FormApi[V] {
+  mut default_values : V
+  mut default_state : FormDefaultState[V]
+  mut values : V
+  mut submission_attempts : Int
+  mut is_submitting : Bool
+  mut is_submitted : Bool
+  mut is_submit_successful : Bool
+  mut is_validating : Bool
+  meta : MetaStore
+  field_regs : Map[Key, FieldReg[V]]
+  subs : Subscriptions
+  mut next_field_token : Int
+  on_field_unmount : ((Key) -> Unit)?
+  mut clock : Clock?
+  mut submit_error : String?
+  submit_validators : Map[Key, (V) -> Unit]
+  dep_watches : Map[Key, Map[Key, () -> Unit]]
+}
+pub fn[V] FormApi::batch(Self[V], () -> Unit) -> Unit
+pub fn[V] FormApi::blur_field(Self[V], Key) -> Unit
+pub fn[V] FormApi::can_submit(Self[V]) -> Bool
+pub fn[V, A] FormApi::clear_values(Self[V], Lens[V, Array[A]], dont_update_meta? : Bool) -> Unit
+pub fn[V] FormApi::default_values(Self[V]) -> V
+pub fn[V] FormApi::delete_field(Self[V], Key) -> Unit
+pub fn[V, A] FormApi::field(Self[V], Lens[V, A], default? : A, on_change? : (A) -> Unit, on_blur? : () -> Unit, on_mount? : () -> Unit, on_unmount? : () -> Unit, on_mount_validate? : Validator[A, V], on_change_validate? : Validator[A, V], on_blur_validate? : Validator[A, V], on_submit_validate? : Validator[A, V], on_change_async_validate? : AsyncValidator[A, V], on_blur_async_validate? : AsyncValidator[A, V], async_debounce_ms? : Int, on_change_async_debounce_ms? : Int, on_blur_async_debounce_ms? : Int, listen_to? : Array[Key]) -> FieldApi[V, A]
+pub fn[V] FormApi::field_meta(Self[V], Key) -> FieldMetaState
+pub fn[V, A] FormApi::get_value(Self[V], Lens[V, A]) -> A
+pub fn[V] FormApi::handle_submit(Self[V], submit_options? : SubmitOptions[V]) -> Unit
+pub fn[V] FormApi::has_field_meta(Self[V], Key) -> Bool
+pub fn[V, A] FormApi::insert_value(Self[V], Lens[V, Array[A]], Int, A, dont_update_meta? : Bool) -> Unit
+pub fn[V] FormApi::is_blurred(Self[V]) -> Bool
+pub fn[V] FormApi::is_dirty(Self[V]) -> Bool
+pub fn[V] FormApi::is_pristine(Self[V]) -> Bool
+pub fn[V] FormApi::is_submit_successful(Self[V]) -> Bool
+pub fn[V] FormApi::is_submitted(Self[V]) -> Bool
+pub fn[V] FormApi::is_submitting(Self[V]) -> Bool
+pub fn[V] FormApi::is_touched(Self[V]) -> Bool
+pub fn[V] FormApi::is_valid_fields(Self[V]) -> Bool
+pub fn[V] FormApi::is_validating(Self[V]) -> Bool
+pub fn[V] FormApi::make(V, default_state? : FormDefaultState[V], on_field_unmount? : (Key) -> Unit) -> Self[V]
+pub fn[V] FormApi::meta_store(Self[V]) -> MetaStore
+pub fn[V, A] FormApi::move_value(Self[V], Lens[V, Array[A]], Int, Int, dont_update_meta? : Bool) -> Unit
+pub fn[V, A] FormApi::push_value(Self[V], Lens[V, Array[A]], A, dont_update_meta? : Bool) -> Unit
+pub fn[V, A] FormApi::remove_value(Self[V], Lens[V, Array[A]], Int, dont_update_meta? : Bool) -> Unit
+pub fn[V, A] FormApi::replace_value(Self[V], Lens[V, Array[A]], Int, A, dont_update_meta? : Bool) -> Unit
+pub fn[V] FormApi::reset(Self[V], values? : V, keep_default_values? : Bool) -> Unit
+pub fn[V, A] FormApi::set_value(Self[V], Lens[V, A], A, dont_update_meta? : Bool, dont_run_listeners? : Bool, dont_validate? : Bool) -> Unit
+pub fn[V] FormApi::submission_attempts(Self[V]) -> Int
+pub fn[V] FormApi::submit_error(Self[V]) -> String?
+pub fn[V] FormApi::subscribe(Self[V], () -> Unit) -> Int
+pub fn[V] FormApi::subscribe_field(Self[V], Key, kinds? : Array[ChangeKind], () -> Unit) -> Int
+pub fn[V, A] FormApi::swap_values(Self[V], Lens[V, Array[A]], Int, Int, dont_update_meta? : Bool) -> Unit
+pub fn[V] FormApi::unsubscribe(Self[V], Int) -> Unit
+pub fn[V : Eq] FormApi::update(Self[V], default_values? : V, default_state? : FormDefaultState[V]) -> Unit
+pub fn[V] FormApi::values(Self[V]) -> V
+pub fn[V] FormApi::with_clock(Self[V], Clock) -> Self[V]
+
+pub struct FormDefaultState[V] {
+  values : V?
+  submission_attempts : Int
+  is_submitting : Bool
+  is_submitted : Bool
+  is_submit_successful : Bool
+  is_validating : Bool
+}
+pub fn[V] FormDefaultState::make() -> Self[V]
+
+pub struct Key {
+  segs : Array[Seg]
+} derive(Compare, Eq, Hash, @debug.Debug)
+pub fn Key::concat(Self, Self) -> Self
+pub fn Key::field(String) -> Self
+pub fn Key::from_segs(Array[Seg]) -> Self
+pub fn Key::has_prefix(Self, Self) -> Bool
+pub fn Key::idx(Int) -> Self
+pub fn Key::length(Self) -> Int
+pub fn Key::push_field(Self, String) -> Self
+pub fn Key::push_idx(Self, Int) -> Self
+pub fn Key::render(Self) -> String
+pub fn Key::root() -> Self
+pub fn Key::strip_prefix(Self, Self) -> Self?
+
+pub struct Lens[S, A] {
+  key : Key
+  get : (S) -> A
+  set : (S, A) -> S
+}
+pub fn[S, M, A] Lens::compose(Self[S, M], Self[M, A]) -> Self[S, A]
+pub fn[S, A] Lens::get(Self[S, A], S) -> A
+pub fn[S, A] Lens::set(Self[S, A], S, A) -> S
+
+pub struct MetaStore {
+  mut entries : Map[Key, FieldMetaState]
+}
+pub fn MetaStore::bump_array_version(Self, Key) -> Unit
+pub fn MetaStore::clear_under(Self, Key) -> Unit
+pub fn MetaStore::contains(Self, Key) -> Bool
+pub fn MetaStore::ensure(Self, Key) -> FieldMetaState
+pub fn MetaStore::get(Self, Key) -> FieldMetaState?
+pub fn MetaStore::get_or_default(Self, Key) -> FieldMetaState
+pub fn MetaStore::keys(Self) -> Array[Key]
+pub fn MetaStore::keys_under(Self, Key) -> Array[Key]
+pub fn MetaStore::length(Self) -> Int
+pub fn MetaStore::make() -> Self
+pub fn MetaStore::remap_insert(Self, Key, Int) -> Unit
+pub fn MetaStore::remap_move(Self, Key, Int, Int) -> Unit
+pub fn MetaStore::remap_remove(Self, Key, Int) -> Unit
+pub fn MetaStore::remap_swap(Self, Key, Int, Int) -> Unit
+pub fn MetaStore::remove(Self, Key) -> Unit
+pub fn MetaStore::set(Self, Key, FieldMetaState) -> Unit
+pub fn MetaStore::update(Self, Key, (FieldMetaState) -> FieldMetaState) -> Unit
+
+pub enum Seg {
+  Field(String)
+  Idx(Int)
+} derive(Compare, Eq, Hash, @debug.Debug)
+
+pub(all) struct Sub {
+  id : Int
+  key : Key?
+  kinds : Array[ChangeKind]?
+  cb : () -> Unit
+}
+
+pub struct SubmitHandler[V] {
+  handler : (V, (SubmitResult) -> Unit) -> Unit
+}
+
+pub(all) struct SubmitOptions[V] {
+  on_submit : SubmitHandler[V]?
+  on_submit_invalid : ((V) -> Unit)?
+  on_submit_error : ((String) -> Unit)?
+}
+pub fn[V] SubmitOptions::make() -> Self[V]
+
+pub enum SubmitResult {
+  Ok
+  Err(String)
+  Prevented
+}
+pub fn SubmitResult::err(String) -> Self
+pub fn SubmitResult::ok() -> Self
+pub fn SubmitResult::prevented() -> Self
+
+pub struct Subscriptions {
+  mut next_id : Int
+  mut subs : Array[Sub]
+  mut batch_depth : Int
+  mut pending_all : Bool
+  mut pending : Array[(Key, ChangeKind)]
+}
+pub fn Subscriptions::batch(Self, () -> Unit) -> Unit
+pub fn Subscriptions::make() -> Self
+pub fn Subscriptions::subscribe(Self, () -> Unit) -> Int
+pub fn Subscriptions::subscribe_field(Self, Key, kinds? : Array[ChangeKind], () -> Unit) -> Int
+pub fn Subscriptions::unsubscribe(Self, Int) -> Unit
+
+type Timer
+
+pub enum ValidationCause {
+  Mount
+  Change
+  Blur
+  Submit
+  Server
+} derive(Eq, @debug.Debug)
+pub fn ValidationCause::blur() -> Self
+pub fn ValidationCause::change() -> Self
+pub fn ValidationCause::mount() -> Self
+pub fn ValidationCause::server() -> Self
+pub fn ValidationCause::submit() -> Self
+
+pub struct ValidationSpec[A, V] {
+  on_mount : Validator[A, V]?
+  on_change : Validator[A, V]?
+  on_blur : Validator[A, V]?
+  on_submit : Validator[A, V]?
+  on_change_async : AsyncValidator[A, V]?
+  on_blur_async : AsyncValidator[A, V]?
+  on_change_async_debounce_ms : Int
+  on_blur_async_debounce_ms : Int
+}
+pub fn[A, V] ValidationSpec::make() -> Self[A, V]
+
+pub struct Validator[A, V] {
+  validate : (A, V) -> Array[String]
+}
+pub fn[A, V] Validator::run(Self[A, V], A, V) -> Array[String]
+pub fn[A, V] Validator::then(Self[A, V], Self[A, V]) -> Self[A, V]
+
+pub struct VirtualClock {
+  mut time : Int
+  mut next_id : Int
+  mut timers : Array[Timer]
+}
+pub fn VirtualClock::cancel(Self, Int) -> Unit
+pub fn VirtualClock::clock(Self) -> Clock
+pub fn VirtualClock::make() -> Self
+pub fn VirtualClock::now(Self) -> Int
+pub fn VirtualClock::run_all(Self) -> Unit
+pub fn VirtualClock::schedule(Self, Int, () -> Unit) -> Int
+pub fn VirtualClock::tick(Self, Int) -> Unit
+
+// Type aliases
+
+// Traits

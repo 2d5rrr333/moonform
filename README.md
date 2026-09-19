@@ -1,0 +1,105 @@
+# moonform
+
+MoonBit 原生 headless 表单状态库。**Architecture inspired by [TanStack Form](https://github.com/TanStack/form)**（MIT）。
+
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+## 是什么
+
+- **Headless 表单状态机**：字段值、dirty/touched、错误派生、按需订阅、提交编排——语义对标 `@tanstack/form-core@1.33.5`（上游测试集行为等价翻译，见 [upstream/PARITY.md](upstream/PARITY.md)）
+- **结构化字段访问器（lens）**：替代 dot-path 字符串——`(key, get, set)` 三元组组合子，编译期安全、重构改名不失配；数组字段操作（push/insert/remove/swap/move/replace）+ meta 迁移
+- **Resolver 协议**：校验器即插即用——内置轻量规则包（required/min/max/pattern/闭包）+ moonschema（zod-style JSON Schema）适配
+- **Adapter 协议**：核心不渲染；tiye/react 适配器经 `use_sync_external_store` 桥接
+- **跨目标**：core/rules 零第三方依赖，js/wasm/native 三目标可编译；同一校验定义服务端/前端复用（同构）
+- **虚拟时钟**：防抖/竞态中止/异步提交对注入的 `Clock` 协议实现——测试确定性推进虚拟时间，不依赖真实定时器
+
+## 包结构
+
+| 包 | 依赖 | 说明 |
+|---|---|---|
+| `core` | 零 | 状态机、Key/Lens、MetaStore、订阅、Clock、Validator、提交编排 |
+| `rules` | 零 | required/min/max/length/pattern/contains/自定义闭包 |
+| `schema` | vendor moonschema | moonschema 适配（JSON-Pointer 错误路径 → 字段错误槽） |
+| `react` | tiye/react | FieldBridge + use_field（js 目标） |
+| `lens-gen` | 零 | .mbti 驱动的访问器代码生成器（增量增强） |
+| `examples/login` | 全部 | 登录表单示例（headless 验证可跑） |
+
+## 快速开始
+
+```moonbit
+struct Login {
+  email : String
+  password : String
+} derive(Eq, Debug)
+
+fn email_l() -> @core.Lens[Login, String] {
+  @core.field("email", v => v.email, (v, e) => { ..v, email: e })
+}
+
+let form = @core.FormApi::make({ email: "", password: "" })
+let email = form.field(
+  email_l(),
+  on_change_validate=@rules.required().then(@rules.min_length(3)),
+)
+email.mount()
+email.set_value("ab")            // → errors: ["Must be at least 3 characters"]
+email.handle_blur()              // → touched + blurred
+form.handle_submit(submit_options=...) // 校验拦截 / 提交生命周期
+```
+
+数组字段：
+
+```moonbit
+fn friends_l() -> @core.Lens[Form, Array[Friend]] = ...
+form.push_value(friends_l(), friend)
+form.remove_value(friends_l(), 0)  // friends[1].name 的错误迁移到 friends[0].name
+form.swap_values(friends_l(), 0, 2)
+```
+
+异步校验（虚拟时钟，测试确定性）：
+
+```moonbit
+let clock = @core.VirtualClock::make()
+let form = @core.FormApi::make(values).with_clock(clock.clock())
+let field = form.field(
+  email_l(),
+  on_change_async_debounce_ms=500,
+  on_change_async_validate=@core.async_validator(...),
+)
+field.set_value("x")
+clock.run_all()   // 防抖窗口 + 校验完成，一次推进
+```
+
+React（tiye/react）：
+
+```moonbit
+let bridge = @formreact.FieldBridge::make(form, email_l())
+let state = @react.use_sync_external_store(subscribe..., () => bridge.state())
+// state.value / state.errors / state.is_touched ...
+```
+
+更多见 [examples/README](src/examples/README.md)。
+
+## 测试与验收
+
+```bash
+moon test --target js      # 192 tests（含上游译文）
+moon test --target wasm    # 同
+moon check --target native # native 可编译（跑 test 需本机 C 编译器）
+moon run src/examples/login --target js   # 示例验收
+```
+
+上游对账：**143 个译文测试**覆盖 form-core@1.33.5 核心 291 用例的行为语义；
+豁免清单（utils dot-path 机器/FormGroup/mergeForm/类型层测试）与有意偏离
+（值语义/虚拟时钟/稳定 ID 簿记等 7 项）逐条记录于
+[upstream/PARITY.md](upstream/PARITY.md)。
+
+## 致谢
+
+- [TanStack Form](https://github.com/TanStack/form)（MIT）——行为语义基准
+- [QuietlyChan/moonschema](https://github.com/QuietlyChan/moonschema)（Apache-2.0）——schema 校验引擎，源码 vendor 于 `src/vendor/moonschema`
+- [tiye/react](https://mooncakes.io/docs/#/tiye/react/)——React 绑定
+
+## License
+
+MIT

@@ -1,0 +1,6 @@
+import {
+  "2d5rrr333/moonform/core",
+  "tiye/react" @tiye_react,
+}
+
+supported_targets = "js"

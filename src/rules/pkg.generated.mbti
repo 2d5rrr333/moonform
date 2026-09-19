@@ -1,0 +1,33 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "2d5rrr333/moonform/rules"
+
+import {
+  "2d5rrr333/moonform/core",
+}
+
+// Values
+pub fn[V] contains(String, message? : String) -> @core.Validator[String, V]
+
+pub fn[A, V] custom((A) -> Array[String]) -> @core.Validator[A, V]
+
+pub fn[V] max_length(Int, message? : String) -> @core.Validator[String, V]
+
+pub fn[V] max_value(Double, message? : String) -> @core.Validator[Double, V]
+
+pub fn[V] min_length(Int, message? : String) -> @core.Validator[String, V]
+
+pub fn[V] min_value(Double, message? : String) -> @core.Validator[Double, V]
+
+pub fn[V] required(message? : String) -> @core.Validator[String, V]
+
+pub fn[V] required_array(message? : String) -> @core.Validator[Array[String], V]
+
+pub fn[V] starts_with(String, message? : String) -> @core.Validator[String, V]
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

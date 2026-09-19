@@ -1,0 +1,39 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "2d5rrr333/moonform/lens-gen"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn emit_all(Array[MbtiStruct], String) -> String
+
+pub fn emit_for_struct(MbtiStruct, String) -> String
+
+pub fn emit_lens(String, MbtiField, String) -> String
+
+pub fn generate(String, String) -> String
+
+pub fn parse_mbti(String) -> Array[MbtiStruct]
+
+pub fn parse_only(String) -> Array[MbtiStruct]
+
+pub fn snake(String) -> String
+
+// Errors
+
+// Types and methods
+pub struct MbtiField {
+  name : String
+  type_ref : String
+} derive(Eq, @debug.Debug)
+
+pub struct MbtiStruct {
+  name : String
+  type_params : Array[String]
+  fields : Array[MbtiField]
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

@@ -1,0 +1,13 @@
+import {
+  "2d5rrr333/moonform/core",
+  "2d5rrr333/moonform/schema" @formschema,
+  "2d5rrr333/moonform/vendor/moonschema/schema" @moonschema,
+  "2d5rrr333/moonform/vendor/moonschema/builder",
+  "2d5rrr333/moonform/react" @formreact,
+}
+
+supported_targets = "js"
+
+options(
+  "is-main": true,
+)
