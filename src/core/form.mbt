@@ -384,17 +384,35 @@ fn[V, A : Eq] FormApi::register_field(
       Some(d) => lens.set(defaults, d)
       None => defaults
     }
-    lens.get(current) != lens.get(eff_defaults)
+    match (lens.try_get(current), lens.try_get(eff_defaults)) {
+      (Some(cur), Some(def)) => cur != def
+      (None, None) => false
+      // a stale slot vs a live slot (or vice versa): the field moved —
+      // treat as dirty so form-level is_dirty reflects the change
+      _ => true
+    }
   }
   let on_change_v : ((V) -> Unit)? = match on_change {
-    Some(cb) => Some(values => cb(lens.get(values)))
+    Some(cb) =>
+      Some(values => {
+        match lens.try_get(values) {
+          Some(v) => cb(v)
+          None => () // stale array slot: skip
+        }
+      })
     None => None
   }
   let validate_v : ((V) -> Unit)? = Some(values => {
-    validate_on_change(values, lens.get(values))
+    match lens.try_get(values) {
+      Some(v) => validate_on_change(values, v)
+      None => () // stale array slot: skip validation
+    }
   })
   self.submit_validators.set(lens.key, values => {
-    validate_on_submit(values, lens.get(values))
+    match lens.try_get(values) {
+      Some(v) => validate_on_submit(values, v)
+      None => ()
+    }
   })
   self.field_regs.set(lens.key, {
     token,

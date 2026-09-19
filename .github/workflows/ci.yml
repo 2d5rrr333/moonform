@@ -67,7 +67,7 @@ jobs:
         run: moon test --target native
 
   example:
-    name: Example (login, headless verification)
+    name: Examples (login + roster, headless verification)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -79,3 +79,5 @@ jobs:
         run: moon update
       - name: Run login example
         run: moon run src/examples/login --target js
+      - name: Run roster example
+        run: moon run src/examples/roster --target js

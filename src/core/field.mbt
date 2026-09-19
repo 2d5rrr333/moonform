@@ -194,27 +194,31 @@ pub fn[V, A] FieldApi::schedule_async_validation(
   }
   let launch = () => {
     self.async_timer = None
-    set_validating(true)
-    let value = self.lens.get(form.values)
-    let form_value = form.values
-    (validator.validate)(value, form_value, clock, errors => {
-      if run == self.async_seq {
-        // latest run: apply the result
-        let slot : Array[String]? = if errors.length() > 0 {
-          Some(errors)
-        } else {
-          None
-        }
-        let vcause : ValidationCause = match cause {
-          ChangeAsync => Change
-          BlurAsync => Blur
-        }
-        form.meta.update(key, m => m.with_cause_errors(vcause, slot))
-        set_validating(false)
-        form.subs.notify(key, Meta)
-        // stale run: discarded (race guard)
+    match self.lens.try_get(form.values) {
+      Some(value) => {
+        set_validating(true)
+        let form_value = form.values
+        (validator.validate)(value, form_value, clock, errors => {
+          if run == self.async_seq {
+            // latest run: apply the result
+            let slot : Array[String]? = if errors.length() > 0 {
+              Some(errors)
+            } else {
+              None
+            }
+            let vcause : ValidationCause = match cause {
+              ChangeAsync => Change
+              BlurAsync => Blur
+            }
+            form.meta.update(key, m => m.with_cause_errors(vcause, slot))
+            set_validating(false)
+            form.subs.notify(key, Meta)
+            // stale run: discarded (race guard)
+          }
+        })
       }
-    })
+      None => () // stale array slot: skip the async run
+    }
   }
   if debounce > 0 {
     self.async_timer = Some(clock.schedule(debounce, launch))
@@ -248,29 +252,30 @@ pub fn[V, A] FieldApi::abort_async_validation(self : FieldApi[V, A]) -> Unit {
 
 ///|
 /// Like `run_validation`, but validates against a given form value (the
-/// post-write value when dispatched from `set_value`).
+/// post-write value when dispatched from `set_value`). Stale array slots
+/// (the field's index no longer exists in the value) are skipped.
 pub fn[V, A] FieldApi::run_validation_against(
   self : FieldApi[V, A],
   cause : ValidationCause,
   form_value : V,
 ) -> Unit {
-  match
-    run_sync_validators(
-      self.validation,
-      cause,
-      self.lens.get(form_value),
-      form_value,
-    ) {
-    Some(errors) => {
-      let slot : Array[String]? = if errors.length() > 0 {
-        Some(errors)
-      } else {
-        None
+  match self.lens.try_get(form_value) {
+    Some(value) =>
+      match run_sync_validators(self.validation, cause, value, form_value) {
+        Some(errors) => {
+          let slot : Array[String]? = if errors.length() > 0 {
+            Some(errors)
+          } else {
+            None
+          }
+          self.form.meta.update(self.lens.key, m => {
+            m.with_cause_errors(cause, slot)
+          })
+          self.form.subs.notify(self.lens.key, Meta)
+        }
+        None => ()
       }
-      self.form.meta.update(self.lens.key, m => m.with_cause_errors(cause, slot))
-      self.form.subs.notify(self.lens.key, Meta)
-    }
-    None => ()
+    None => () // stale array slot: nothing to validate
   }
 }
 
@@ -352,8 +357,21 @@ pub fn[V, A] FieldApi::default_value(self : FieldApi[V, A]) -> A {
 
 ///|
 /// Is the field dirty (value differs deeply from its effective default)?
+/// Stale array slots (index gone from the value) are never dirty.
 pub fn[V, A : Eq] FieldApi::is_dirty(self : FieldApi[V, A]) -> Bool {
-  self.value() != self.default_value()
+  match
+    (
+      self.lens.try_get(self.form.values),
+      self.lens.try_get(self.form.default_values),
+    ) {
+    (Some(cur), Some(def)) =>
+      match self.own_default {
+        Some(d) => cur != d
+        None => cur != def
+      }
+    (None, None) => false
+    _ => true
+  }
 }
 
 ///|
