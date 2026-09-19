@@ -113,7 +113,8 @@ let state = @react.use_sync_external_store(
 // state.value / state.errors / state.is_touched ...
 ```
 
-更多见 [examples/README](src/examples/README.md)。
+更多见 [examples/README](src/examples/README.md)。**浏览器 demo**（React 登录表单，
+无头浏览器 5 项检查全过）：[web/](web/README.md)。
 
 ## 测试与验收
 
