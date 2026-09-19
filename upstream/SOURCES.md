@@ -6,6 +6,8 @@
 - 路径：`packages/form-core/tests/`（该 tag 下）
 - tests 目录 tree SHA：`31a06e11fa1f7316d4eed27bdbc50d6061aace38`
 - 已验证：main 分支 `packages/form-core/src` 15 文件与该 tag 逐字节一致（GitHub contents API SHA 比对，2026-09-19）——"对标 main" 由此成立；若未来 main 分叉，以本快照为准。
+- 许可：本目录内的 `*.spec.ts` / `utils.ts` 文件来自 TanStack Form（MIT License，Copyright (c) 2021-present Tanner Linsley，全文见 [LICENSE-TANSTACK-FORM](LICENSE-TANSTACK-FORM)）。仅作行为等价翻译的参照快照随包分发，moonform 本体为其独立实现，未复制其源代码。
+- moonform 本体许可证：MIT（见仓库根 [LICENSE](../LICENSE)）。
 
 本目录文件（GitHub API blob SHA，供完整性校验）：
 
