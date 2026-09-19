@@ -35,6 +35,8 @@ moon add 2d5rrr333/moonform/rules
 
 ## 是什么
 
+**为什么**：mooncakes.io 已有渲染层（tiye/react 等）与校验层（moonschema 等），但表单状态编排层完全空缺——字段状态机、校验时序（防抖/竞态）、数组字段操作、提交生命周期，是每个 Web 项目都要手写的易错胶水代码。moonform 补齐这一层：headless（不绑定渲染框架）、三目标同构（同一校验定义前端/服务端复用）、行为正确性以上游测试集等价翻译为规格（不是自夸，可审计）。
+
 - **Headless 表单状态机**：字段值、dirty/touched、错误派生、按需订阅、提交编排——语义对标 `@tanstack/form-core@1.33.5`（上游测试集行为等价翻译，见 [upstream/PARITY.md](upstream/PARITY.md)）
 - **结构化字段访问器（lens）**：替代 dot-path 字符串——`(key, get, set)` 三元组组合子，编译期安全、重构改名不失配；数组字段操作（push/insert/remove/swap/move/replace）+ meta 迁移
 - **Resolver 协议**：校验器即插即用——内置轻量规则包（required/min/max/pattern/闭包）+ moonschema（zod-style JSON Schema）适配
@@ -47,7 +49,7 @@ moon add 2d5rrr333/moonform/rules
 | 包 | 依赖 | 说明 |
 |---|---|---|
 | `core` | 零 | 状态机、Key/Lens、MetaStore、订阅、Clock、Validator、提交编排 |
-| `rules` | 零 | required/min/max/length/pattern/contains/自定义闭包 |
+| `rules` | 零 | required/min/max/length/pattern/contains/equals/non_blank/numeric/must_be_true/自定义闭包 |
 | `schema` | vendor moonschema | moonschema 适配（JSON-Pointer 错误路径 → 字段错误槽） |
 | `react` | tiye/react | FieldBridge + use_field（js 目标） |
 | `lens-gen` | 零 | .mbti 驱动的访问器代码生成器（增量增强） |
@@ -79,7 +81,7 @@ form.handle_submit(submit_options=...) // 校验拦截 / 提交生命周期
 数组字段：
 
 ```moonbit
-fn friends_l() -> @core.Lens[Form, Array[Friend]] = ...
+// fn friends_l() -> Lens[Form, Array[Friend]] —— 访问器定义同上
 form.push_value(friends_l(), friend)
 form.remove_value(friends_l(), 0)  // friends[1].name 的错误迁移到 friends[0].name
 form.swap_values(friends_l(), 0, 2)
@@ -103,7 +105,11 @@ React（tiye/react）：
 
 ```moonbit
 let bridge = @formreact.FieldBridge::make(form, email_l())
-let state = @react.use_sync_external_store(subscribe..., () => bridge.state())
+let handle = @formreact.use_field_handle(bridge)
+let state = @react.use_sync_external_store(
+  () => handle.subscribe(),
+  () => handle.get_snapshot(),
+)
 // state.value / state.errors / state.is_touched ...
 ```
 
@@ -112,11 +118,14 @@ let state = @react.use_sync_external_store(subscribe..., () => bridge.state())
 ## 测试与验收
 
 ```bash
-moon test --target js      # 192 tests（含上游译文）
-moon test --target wasm    # 同
-moon check --target native # native 可编译（跑 test 需本机 C 编译器）
+moon test --target js      # 210 tests（含上游译文 + 文档测试）
+moon test --target wasm    # 205 tests
+moon test --target native  # CI 已验证（GitHub Actions 五作业全绿）
 moon run src/examples/login --target js   # 示例验收
 ```
+
+三目标 `moon check` 零警告；CI 覆盖 check×3 目标 + test×3 目标 + 示例运行
+（[workflow](.github/workflows/ci.yml)）。
 
 上游对账：**143 个译文测试**覆盖 form-core@1.33.5 核心 291 用例的行为语义；
 豁免清单（utils dot-path 机器/FormGroup/mergeForm/类型层测试）与有意偏离
