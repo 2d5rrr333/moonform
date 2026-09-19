@@ -82,6 +82,51 @@ test "custom closure rule" {
 }
 
 ///|
+test "min_int / max_int boundaries are inclusive" {
+  let minr : @core.Validator[Int, DummyForm] = min_int(3)
+  assert_eq(@core.Validator::run(minr, 2, dummy()), ["Must be at least 3"])
+  assert_eq(@core.Validator::run(minr, 3, dummy()), [])
+  let maxr : @core.Validator[Int, DummyForm] = max_int(10)
+  assert_eq(@core.Validator::run(maxr, 11, dummy()), ["Must be at most 10"])
+  assert_eq(@core.Validator::run(maxr, 10, dummy()), [])
+}
+
+///|
+test "equals accepts only the expected constant" {
+  let r : @core.Validator[String, DummyForm] = equals("yes")
+  assert_eq(@core.Validator::run(r, "yes", dummy()), [])
+  assert_eq(@core.Validator::run(r, "no", dummy()), ["Values do not match"])
+}
+
+///|
+test "must_be_true enforces checked boxes" {
+  let r : @core.Validator[Bool, DummyForm] = must_be_true()
+  assert_eq(@core.Validator::run(r, true, dummy()), [])
+  assert_eq(@core.Validator::run(r, false, dummy()), [
+    "This field must be checked",
+  ])
+}
+
+///|
+test "non_blank rejects whitespace-only strings" {
+  let r : @core.Validator[String, DummyForm] = non_blank()
+  assert_eq(@core.Validator::run(r, "ok", dummy()), [])
+  assert_eq(@core.Validator::run(r, "", dummy()), ["Must not be blank"])
+  assert_eq(@core.Validator::run(r, "   ", dummy()), ["Must not be blank"])
+  assert_eq(@core.Validator::run(r, " \t\n ", dummy()), ["Must not be blank"])
+}
+
+///|
+test "numeric accepts integers with optional sign" {
+  let r : @core.Validator[String, DummyForm] = numeric()
+  assert_eq(@core.Validator::run(r, "123", dummy()), [])
+  assert_eq(@core.Validator::run(r, "-42", dummy()), [])
+  assert_eq(@core.Validator::run(r, "12a", dummy()), ["Must be a number"])
+  assert_eq(@core.Validator::run(r, "1-2", dummy()), ["Must be a number"])
+  assert_eq(@core.Validator::run(r, "", dummy()), ["Must be a number"])
+}
+
+///|
 struct Login {
   email : String
 } derive(Eq, Debug)
