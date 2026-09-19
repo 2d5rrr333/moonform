@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  check:
+    name: Check (js/wasm/native)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: moonbitlang/setup-moonbit@v1
+      - name: moon check (js)
+        run: moon check --target js
+      - name: moon check (wasm)
+        run: moon check --target wasm
+      - name: moon check (native)
+        run: moon check --target native
+
+  test-js:
+    name: Test (js)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: moonbitlang/setup-moonbit@v1
+      - name: moon test
+        run: moon test --target js
+
+  test-wasm:
+    name: Test (wasm)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: moonbitlang/setup-moonbit@v1
+      - name: moon test
+        run: moon test --target wasm
+
+  test-native:
+    name: Test (native)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: moonbitlang/setup-moonbit@v1
+      - name: moon test
+        run: moon test --target native
+
+  example:
+    name: Example (login, headless verification)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: moonbitlang/setup-moonbit@v1
+      - name: run login example
+        run: moon run src/examples/login --target js
