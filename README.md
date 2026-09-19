@@ -3,6 +3,35 @@
 MoonBit 原生 headless 表单状态库。**Architecture inspired by [TanStack Form](https://github.com/TanStack/form)**（MIT）。
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/2d5rrr333/moonform/actions/workflows/ci.yml/badge.svg)](https://github.com/2d5rrr333/moonform/actions/workflows/ci.yml)
+[![mooncakes.io](https://img.shields.io/badge/mooncakes.io-2d5rrr333%2Fmoonform-orange)](https://mooncakes.io/docs/#/2d5rrr333/moonform/)
+
+[English](README.en.md) | 中文
+
+## 安装
+
+```bash
+# 核心包 + 内置规则（零第三方依赖）
+moon add 2d5rrr333/moonform/core
+moon add 2d5rrr333/moonform/rules
+```
+
+```json
+// moon.mod.json 中出现：
+"deps": { "2d5rrr333/moonform": "0.1.0" }
+```
+
+```json
+// 按需在包的 moon.pkg 中引入：
+{
+  "import": [
+    "2d5rrr333/moonform/core",
+    "2d5rrr333/moonform/rules"
+  ]
+}
+```
+
+可选包：`/schema`（moonschema 适配，模块内已含 vendor 源码，无需额外依赖）、`/react`（需 `moon add tiye/react`）、`/lens-gen`（访问器生成器）。
 
 ## 是什么
 
