@@ -127,6 +127,31 @@ test "numeric accepts integers with optional sign" {
 }
 
 ///|
+test "email accepts common shapes, rejects broken ones" {
+  let r : @core.Validator[String, DummyForm] = email()
+  assert_eq(@core.Validator::run(r, "user@example.com", dummy()), [])
+  assert_eq(@core.Validator::run(r, "a.b@x.io", dummy()), [])
+  assert_eq(@core.Validator::run(r, "no-at-sign", dummy()), ["Invalid email address"])
+  assert_eq(@core.Validator::run(r, "@example.com", dummy()), ["Invalid email address"])
+  assert_eq(@core.Validator::run(r, "user@", dummy()), ["Invalid email address"])
+  assert_eq(@core.Validator::run(r, "user@example", dummy()), ["Invalid email address"])
+  assert_eq(@core.Validator::run(r, "user@.com", dummy()), ["Invalid email address"])
+  assert_eq(@core.Validator::run(r, "user@example.", dummy()), ["Invalid email address"])
+  assert_eq(@core.Validator::run(r, "a@b@c.com", dummy()), ["Invalid email address"])
+}
+
+///|
+test "url accepts http(s) with dotted host or localhost" {
+  let r : @core.Validator[String, DummyForm] = url()
+  assert_eq(@core.Validator::run(r, "https://example.com", dummy()), [])
+  assert_eq(@core.Validator::run(r, "http://a.b/c?d=e", dummy()), [])
+  assert_eq(@core.Validator::run(r, "http://localhost:8080", dummy()), [])
+  assert_eq(@core.Validator::run(r, "ftp://example.com", dummy()), ["Invalid URL"])
+  assert_eq(@core.Validator::run(r, "https://", dummy()), ["Invalid URL"])
+  assert_eq(@core.Validator::run(r, "example.com", dummy()), ["Invalid URL"])
+}
+
+///|
 struct Login {
   email : String
 } derive(Eq, Debug)

@@ -159,3 +159,108 @@ pub fn[V] numeric(message? : String) -> @core.Validator[String, V] {
     }
   })
 }
+
+///|
+/// Pragmatic email check: exactly one '@', non-empty local part, a dot in
+/// a non-empty domain with a non-empty TLD (user@a.b). Not RFC-complete —
+/// use a custom closure validator when you need stricter semantics.
+pub fn[V] email(message? : String) -> @core.Validator[String, V] {
+  let msg = message.unwrap_or("Invalid email address")
+  @core.validator(v => if email_ok(v) { [] } else { [msg] })
+}
+
+fn email_ok(v : String) -> Bool {
+  if count_char(v, '@') != 1 {
+    return false
+  }
+  let at = find_char_pos(v, '@')
+  let user_part = slice_str(v, 0, at)
+  let domain = slice_str(v, at + 1, v.length())
+  if user_part.length() == 0 || domain.length() == 0 {
+    return false
+  }
+  if count_char(domain, '.') < 1 {
+    return false
+  }
+  if domain.has_prefix(".") || domain.has_suffix(".") {
+    return false
+  }
+  let last_dot = last_char_pos(domain, '.')
+  let tld = slice_str(domain, last_dot + 1, domain.length())
+  tld.length() >= 2
+}
+
+///|
+/// Pragmatic http(s) URL check: scheme://host with a non-empty host that
+/// contains a dot (or is "localhost"). Not RFC-complete.
+pub fn[V] url(message? : String) -> @core.Validator[String, V] {
+  let msg = message.unwrap_or("Invalid URL")
+  @core.validator(v => if url_ok(v) { [] } else { [msg] })
+}
+
+fn url_ok(v : String) -> Bool {
+  let https_ok = v.has_prefix("https://")
+  let http_ok = v.has_prefix("http://")
+  if !(http_ok || https_ok) {
+    return false
+  }
+  let scheme_len = if https_ok { 8 } else { 7 }
+  let rest = slice_str(v, scheme_len, v.length())
+  // host ends at the first '/', '?', or ':' (port)
+  let mut host = rest
+  for stop in ['/', '?', ':'] {
+    let p = find_char_pos(host, stop)
+    if p >= 0 {
+      host = slice_str(host, 0, p)
+    }
+  }
+  if host.length() == 0 {
+    return false
+  }
+  host == "localhost" || count_char(host, '.') >= 1
+}
+
+fn count_char(s : String, target : Char) -> Int {
+  let mut n = 0
+  for ch in s {
+    if ch == target {
+      n = n + 1
+    }
+  }
+  n
+}
+
+fn find_char_pos(s : String, target : Char) -> Int {
+  let mut i = 0
+  for ch in s {
+    if ch == target {
+      return i
+    }
+    i = i + 1
+  }
+  -1
+}
+
+fn last_char_pos(s : String, target : Char) -> Int {
+  let mut last = -1
+  let mut i = 0
+  for ch in s {
+    if ch == target {
+      last = i
+    }
+    i = i + 1
+  }
+  last
+}
+
+fn slice_str(s : String, from : Int, until : Int) -> String {
+  let buf = StringBuilder()
+  let mut i = 0
+  for ch in s {
+    if i >= from && i < until {
+      buf.write_char(ch)
+    }
+    i = i + 1
+  }
+  buf.to_string()
+}
