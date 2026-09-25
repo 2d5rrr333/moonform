@@ -6,7 +6,7 @@
 
 **moonform** — MoonBit 原生 headless 表单状态库，语义对标 TanStack form-core@1.33.5（SHA 已验证 = main 分支）。
 - 仓库：https://github.com/2d5rrr333/moonform（master）
-- mooncakes：`2d5rrr333/moonform`（0.1.x–0.7.0 在线；**0.7.1 待发布**——本地已 bump，需 `moon publish`）
+- mooncakes：`2d5rrr333/moonform`（0.1.x–0.7.1 全部在线，latest=0.7.1）
 - OpenSpec：变更 `add-moonform-core` 已归档，主 specs 在 `openspec/specs/moonform/`（7 capability）
 - 位置：`D:\code\moonbit\moonform`（workspace 根 `D:\code\moonbit`，其 openspec/ 记录了对账）
 
@@ -86,7 +86,7 @@ node tools/headless-verify.cjs          # login 5 + wizard 10（含异步提交�
 
 ## 未完事项
 
-1. **0.7.1 发布**：`moon publish`（版本已 bump，CHANGELOG/README 已就绪）
+1. ~~0.7.1 发布~~ ✓ 已发布（mooncakes 200 OK + 服务端 check 通过，2026-09-25）
 2. 申报书：需用户人工撰写，素材在 PROPOSAL-NOTES.md（已刷新至 0.7.1 口径）
 3. 可选后续：moonschema 上游正式发布后解除 vendor、lens-gen CLI 化、mergeForm/SSR（lens-gen CLI 已完成）
 4. 章程要求：仓库文件中不得出现特定自动化工具类字样（已全库清理；web/vendor 与构建产物中的第三方压缩/生成标识符除外）

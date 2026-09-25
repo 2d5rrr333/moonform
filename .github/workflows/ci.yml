@@ -77,7 +77,7 @@ jobs:
         run: moon test --target native --deny-warn
 
   example:
-    name: Examples (login + roster + wizard + isomorphic client/js + server/native)
+    name: Examples (login + roster + wizard + isomorphic + bench)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
