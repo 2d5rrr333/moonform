@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.4] - 2026-09-25
+
+### Added
+
+- Extreme-input robustness tests (fifth audit perspective): every array
+  operation under out-of-range/negative indices and on empty arrays
+  (clamp / no-op semantics, never a crash — insert clamps, remove/swap/
+  move/replace are no-ops, clear empties safely); stale-index reads
+  through lenses after structural removals; six-level nested structured
+  keys composing and prefix-dispatching through groups; unicode string
+  values through length validation (codepoint counting); zero-delay and
+  million-ms timers at exact virtual-clock boundaries. All green — the
+  extreme-input surface needed no fixes, and is now pinned
+- Line-ending hygiene: the four files predating .gitattributes had stale
+  CRLF working-tree checkouts (blob content already LF); refreshed
+
+### Tests
+
+- 322 tests on js, 298 on wasm
+
 ## [0.8.3] - 2026-09-25
 
 ### Fixed
