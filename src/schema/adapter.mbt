@@ -59,3 +59,133 @@ fn message_mentions(message : String, field_name : String) -> Bool {
   // JSON-Schema style: must have required property "email"
   message.contains("\"\{field_name}\"")
 }
+
+// -- group validation --------------------------------------------------------
+
+///|
+/// A group validator over a compiled schema describing the GROUP value:
+/// converts the group value to Json, validates once, and distributes
+/// errors to child fields by their JSON-Pointer paths relative to the
+/// group root ("/username" → the group's `username` field;
+/// "/items/0/name" → the nested key `items.0.name`). Root-path
+/// `required` errors name the missing property in the message and
+/// distribute to that field; other root-path errors (e.g. `minItems` on
+/// an array group) become group-level errors.
+pub fn[G : ToJson, V] schema_group_validator(
+  schema : @moonschema.Schema,
+) -> @core.GroupValidator[G, V] {
+  @core.group_validator((group_value, _form_value) => {
+    let errors = schema.validate(ToJson::to_json(group_value))
+    let field_map : Map[@core.Key, Array[String]] = Map([])
+    let group_errors : Array[String] = []
+    for e in errors {
+      match pointer_to_key(e.instance_path) {
+        Some(k) =>
+          match field_map.get(k) {
+            Some(msgs) => msgs.push(e.message)
+            None => field_map.set(k, [e.message])
+          }
+        None =>
+          // group root: required errors name the property; the rest are
+          // group-level errors
+          if e.keyword == "required" {
+            match quoted_property(e.message) {
+              Some(prop) => {
+                let k = @core.Key::field(prop)
+                match field_map.get(k) {
+                  Some(msgs) => msgs.push(e.message)
+                  None => field_map.set(k, [e.message])
+                }
+              }
+              None => group_errors.push(e.message)
+            }
+          } else {
+            group_errors.push(e.message)
+          }
+      }
+    }
+    let entries : Array[(@core.Key, Array[String])] = []
+    for k, msgs in field_map {
+      entries.push((k, msgs))
+    }
+    @core.GroupValidationResult::make(group_errors, entries)
+  })
+}
+
+///|
+/// Parse a JSON-Pointer instance path relative to the group root into a
+/// structured key: "/username" → `username`, "/items/0/name" →
+/// `items.0.name`. Empty paths (the group root itself) return None.
+fn pointer_to_key(path : String) -> @core.Key? {
+  if path == "" {
+    return None
+  }
+  let mut key = @core.Key::root()
+  let mut any = false
+  for seg in path.split("/") {
+    if seg.is_empty() {
+      continue // leading (and doubled) slashes
+    }
+    let chars = seg.to_array()
+    if all_digits(chars) {
+      key = key.push_idx(chars_to_int(chars))
+    } else {
+      key = key.push_field(chars_to_string(chars))
+    }
+    any = true
+  }
+  if any {
+    Some(key)
+  } else {
+    None // "/" alone: no segments under the root
+  }
+}
+
+///|
+fn all_digits(chars : Array[Char]) -> Bool {
+  if chars.length() == 0 {
+    return false
+  }
+  for c in chars {
+    if c < '0' || c > '9' {
+      return false
+    }
+  }
+  true
+}
+
+///|
+fn chars_to_int(chars : Array[Char]) -> Int {
+  let mut n = 0
+  for c in chars {
+    n = n * 10 + (c.to_int() - '0'.to_int())
+  }
+  n
+}
+
+///|
+fn chars_to_string(chars : Array[Char]) -> String {
+  let b = StringBuilder()
+  for c in chars {
+    b.write_char(c)
+  }
+  b.to_string()
+}
+
+///|
+/// First double-quoted substring of `message` (JSON-Schema `required`
+/// messages quote the missing property name).
+fn quoted_property(message : String) -> String? {
+  let chars = message.to_array()
+  let mut start = -1
+  for i, c in chars {
+    if c == '"' {
+      if start == -1 {
+        start = i
+      } else {
+        return Some(message[start + 1:i].to_owned())
+      }
+    }
+  }
+  None
+}

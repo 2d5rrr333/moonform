@@ -8,6 +8,8 @@ import {
 // Values
 pub fn[A, V : ToJson] schema_field_validator(@2d5rrr333/moonform/vendor/moonschema/schema.Schema, String, @core.Lens[V, A]) -> @core.Validator[A, V]
 
+pub fn[G : ToJson, V] schema_group_validator(@2d5rrr333/moonform/vendor/moonschema/schema.Schema) -> @core.GroupValidator[G, V]
+
 // Errors
 
 // Types and methods
