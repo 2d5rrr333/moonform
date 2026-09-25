@@ -100,13 +100,17 @@
       await sleep(200);
       out.push('S2_FIELD_ERRS=' + JSON.stringify(visibleErrs()));
 
-      // valid nickname -> "Finish" submits the whole form
+      // valid nickname -> "Finish" submits the whole form asynchronously
+      // (real-clock host adapter): in-flight state first, then completion
       setInput(nickname, 'moon');
       await sleep(200);
       clickButton('Finish');
       await sleep(250);
+      const busy = $$('button').find((b) => b.textContent.trim() === 'Submitting...');
+      out.push('SUBMITTING=' + (busy ? 'yes' : 'no'));
+      out.push('SUBMIT_DISABLED=' + (busy ? String(busy.disabled) : 'n/a'));
+      await sleep(900);
       out.push('OK=' + ($('.ok') ? $('.ok').textContent : 'MISSING'));
-      out.push('SUBMIT_STATE=' + (globalThis.__mf_submitted === undefined ? 'n/a' : 'yes'));
       return finish(out);
     };
     function finish(out) {

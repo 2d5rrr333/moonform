@@ -755,6 +755,83 @@ test "group: is_valid recovers after fixing field and group errors" {
   assert_true(step1.is_valid())
 }
 
+// -- nested groups -----------------------------------------------------------
+
+///|
+struct NestLeaf {
+  nname : String
+} derive(Eq, Debug)
+
+///|
+struct NestStep {
+  ninner : NestLeaf
+} derive(Eq, Debug)
+
+///|
+struct NestForm {
+  nstep : NestStep
+} derive(Eq, Debug)
+
+///|
+fn nest_step_l() -> Lens[NestForm, NestStep] {
+  field("step", (f : NestForm) => f.nstep, (_f, s) => { nstep: s, })
+}
+
+///|
+fn nest_inner_l() -> Lens[NestStep, NestLeaf] {
+  field("inner", (s : NestStep) => s.ninner, (_s, l) => { ninner: l, })
+}
+
+///|
+fn nest_name_l() -> Lens[NestLeaf, String] {
+  field("name", (l : NestLeaf) => l.nname, (_l, n) => { nname: n, })
+}
+
+///|
+fn nest_deep_name_l() -> Lens[NestForm, String] {
+  nest_step_l().compose(nest_inner_l()).compose(nest_name_l())
+}
+
+///|
+test "group: a deep child change dispatches every containing group" {
+  let group_listener_fires = { n: 0, }
+  let form = FormApi::make({ nstep: { ninner: { nname: "", }, }, }, on_change_group=_k => {
+    group_listener_fires.n = group_listener_fires.n + 1
+  })
+  let outer_hits = { n: 0, }
+  let inner_hits = { n: 0, }
+  let outer = form.group(
+    nest_step_l(),
+    on_change=_s => outer_hits.n = outer_hits.n + 1,
+    on_change_validate=group_validator_value(_g => {
+      outer_hits.n = outer_hits.n + 1
+      GroupValidationResult::valid()
+    }),
+  )
+  let inner = form.group(
+    nest_step_l().compose(nest_inner_l()),
+    on_change=_l => inner_hits.n = inner_hits.n + 1,
+    on_change_validate=group_validator_value(_g => {
+      inner_hits.n = inner_hits.n + 1
+      GroupValidationResult::valid()
+    }),
+  )
+  let name = form.field(nest_deep_name_l())
+  outer.mount()
+  inner.mount()
+  name.mount()
+  // a change at step.inner.name dispatches BOTH containing groups: each
+  // runs its onChange listener and its change validation
+  name.set_value("x")
+  assert_eq(outer_hits.n, 2) // listener + validator
+  assert_eq(inner_hits.n, 2) // listener + validator
+  // the form-level onChangeGroup listener fires once per containing group
+  assert_eq(group_listener_fires.n, 2)
+  // touched derivation spans the whole subtree of each group
+  assert_true(outer.is_touched())
+  assert_true(inner.is_touched())
+}
+
 ///|
 pub extend Step with Debug::{to_repr}
 
@@ -778,3 +855,21 @@ pub extend WizardU with Debug::{to_repr}
 
 ///|
 pub extend WizardU with Eq::{not_equal, equal}
+
+///|
+pub extend NestLeaf with Debug::{to_repr}
+
+///|
+pub extend NestLeaf with Eq::{not_equal, equal}
+
+///|
+pub extend NestStep with Debug::{to_repr}
+
+///|
+pub extend NestStep with Eq::{not_equal, equal}
+
+///|
+pub extend NestForm with Debug::{to_repr}
+
+///|
+pub extend NestForm with Eq::{not_equal, equal}

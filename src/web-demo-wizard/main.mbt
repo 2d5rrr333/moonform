@@ -106,11 +106,14 @@ struct WizFinish {
 
 ///|
 /// Per-component-instance state: created once (use_ref), never rebuilt
-/// across re-renders. Form, groups, bridges and handles live here.
+/// across re-renders. Form, groups, bridges and handles live here. The
+/// form runs on the real-clock host adapter so the final submission is
+/// genuinely asynchronous (in-flight state visible).
 struct WizardState {
-  form : @core.FormApi[WizValues]
+  clock : @core.Clock
   step1_bridge : @formreact.GroupBridge[WizValues, WizAccount]
   step2_bridge : @formreact.GroupBridge[WizValues, WizProfile]
+  form_bridge : @formreact.FormBridge[WizValues]
   username : @formreact.FieldBridge[WizValues, String]
   email : @formreact.FieldBridge[WizValues, String]
   nickname : @formreact.FieldBridge[WizValues, String]
@@ -119,6 +122,7 @@ struct WizardState {
   nickname_handle : @formreact.FieldBridgeHook[WizValues, String]
   step1_handle : @formreact.GroupBridgeHook[WizValues, WizAccount]
   step2_handle : @formreact.GroupBridgeHook[WizValues, WizProfile]
+  form_handle : @formreact.FormBridgeHook[WizValues]
 }
 
 ///|
@@ -126,10 +130,11 @@ fn wiz_build_state() -> WizardState {
   let schema_v : @core.GroupValidator[WizAccount, WizValues] = @formSchema.schema_group_validator(
     wiz_account_schema(),
   )
+  let clock = @formreact.real_clock()
   let form = @core.FormApi::make({
     account: { username: "", email: "", },
     profile: { nickname: "", },
-  })
+  }).with_clock(clock)
   let step1 = form.group(
     wiz_account_l(),
     on_change_validate=schema_v,
@@ -150,13 +155,15 @@ fn wiz_build_state() -> WizardState {
   nickname.mount()
   let step1_bridge = @formreact.GroupBridge::make(step1)
   let step2_bridge = @formreact.GroupBridge::make(step2)
+  let form_bridge = @formreact.FormBridge::make(form)
   let username_bridge = @formreact.FieldBridge::make(form, wiz_username_l())
   let email_bridge = @formreact.FieldBridge::make(form, wiz_email_l())
   let nickname_bridge = @formreact.FieldBridge::make(form, wiz_nickname_l())
   {
-    form,
+    clock,
     step1_bridge,
     step2_bridge,
+    form_bridge,
     username: username_bridge,
     email: email_bridge,
     nickname: nickname_bridge,
@@ -165,6 +172,7 @@ fn wiz_build_state() -> WizardState {
     nickname_handle: @formreact.use_field_handle(nickname_bridge),
     step1_handle: @formreact.use_group_handle(step1_bridge),
     step2_handle: @formreact.use_group_handle(step2_bridge),
+    form_handle: @formreact.use_form_handle(form_bridge),
   }
 }
 
@@ -256,6 +264,11 @@ fn wizard_component(props : WizFinish) -> @react.VirtualNode {
       () => st.step2_handle.get_snapshot(),
     ),
   )
+  ignore(
+    @react.use_sync_external_store(notify => st.form_handle.subscribe(notify), () => {
+      st.form_handle.get_snapshot()
+    }),
+  )
   if step == 1 {
     let group_errs = st.step1_handle.get_snapshot().errors
     @react.div(class_name="login-card", [
@@ -301,22 +314,35 @@ fn wizard_component(props : WizFinish) -> @react.VirtualNode {
         ]),
         @react.button(
           button_type="button",
+          disabled=st.form_handle.get_snapshot().is_submitting,
           on_click=fn(_e) {
             st.step2_bridge.submit(on_group_submit=(_v, _meta) => {
-              // both steps passed: submit the whole form
-              st.form.handle_submit(submit_options={
+              // both steps passed: submit the whole form — asynchronously
+              // through the real-clock host adapter (in-flight state is
+              // driven by the FormBridge snapshot)
+              st.form_bridge.submit(submit_options={
                 ..@core.SubmitOptions::make(),
                 on_submit: Some(
                   @core.submit_handler((values, done) => {
-                    set_message("Done, \{values.profile.nickname}!")
-                    (props.on_done)(values.profile.nickname)
-                    done(@core.SubmitResult::ok())
+                    let _ = st.clock.schedule(600, () => {
+                      set_message("Done, \{values.profile.nickname}!")
+                      (props.on_done)(values.profile.nickname)
+                      done(@core.SubmitResult::ok())
+                    })
                   }),
                 ),
               })
             })
           },
-          [@react.VirtualNode::Text("Finish")],
+          [
+            @react.VirtualNode::Text(
+              if st.form_handle.get_snapshot().is_submitting {
+                "Submitting..."
+              } else {
+                "Finish"
+              },
+            ),
+          ],
         ),
       ]),
       @react.div(class_name="ok", [@react.VirtualNode::Text(message)]),

@@ -10,6 +10,18 @@ pub struct Clock {
 }
 
 ///|
+/// Construct a Clock from its three capabilities — the host-adapter entry
+/// point: tests inject `VirtualClock`, js hosts bridge real timers
+/// (e.g. the react package's `real_clock`).
+pub fn Clock::make(
+  now : () -> Int,
+  schedule : (Int, () -> Unit) -> Int,
+  cancel : (Int) -> Unit,
+) -> Clock {
+  { now, schedule, cancel, }
+}
+
+///|
 pub fn Clock::now(self : Clock) -> Int {
   (self.now)()
 }

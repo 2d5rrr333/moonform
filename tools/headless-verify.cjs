@@ -83,13 +83,14 @@ function report(checks) {
         ['wizard: empty nickname gives group error', (wizKv['S2_GROUP_ERRS'] || '').includes('Nickname is required')],
         ['wizard: Finish blocked by group error', wizKv['S2_STILL'] === 'Your profile'],
         ['wizard: short nickname gives field error', (wizKv['S2_FIELD_ERRS'] || '').includes('3+ characters')],
-        ['wizard: Finish submits the whole form', /^Done, moon!$/.test(wizKv['OK'] || '')],
+        ['wizard: async submit shows in-flight state', wizKv['SUBMITTING'] === 'yes' && wizKv['SUBMIT_DISABLED'] === 'true'],
+        ['wizard: async submit completes', /^Done, moon!$/.test(wizKv['OK'] || '')],
       ]);
     }
 
     console.log(
       totalFailed === 0
-        ? 'ALL 14 BROWSER CHECKS PASSED'
+        ? 'ALL 15 BROWSER CHECKS PASSED'
         : `${totalFailed} CHECKS FAILED`
     );
     process.exit(totalFailed === 0 ? 0 : 1);

@@ -74,6 +74,7 @@ pub struct Clock {
   cancel : (Int) -> Unit
 }
 pub fn Clock::cancel(Self, Int) -> Unit
+pub fn Clock::make(() -> Int, (Int, () -> Unit) -> Int, (Int) -> Unit) -> Self
 pub fn Clock::now(Self) -> Int
 pub fn Clock::schedule(Self, Int, () -> Unit) -> Int
 
