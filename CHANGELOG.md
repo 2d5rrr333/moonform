@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-09-25
+
+### Changed
+
+- **Toolchain migration to MoonBit 0.1.20260920** (moonc 0.10.14): the new
+  `implicit_impl_as_method` deprecation requires explicit `pub extend T with
+  Trait::{...}` declarations for every derive/explicit impl. Added across
+  all packages (136 declarations), including a mechanical migration patch
+  to the vendored moonschema source (documented in
+  `src/vendor/moonschema/NOTICE.md` — no behavioral change)
+- Blackbox test files qualify own-package references (`@rules.required()`
+  etc.) per the `test_unqualified_package` deprecation; doc-tests in
+  `core/README.mbt.md` qualify `@core.` references and declare extends for
+  their local structs; lens-gen's test suite moved from blackbox to
+  whitebox (hyphenated package names have no usable self-alias)
+- Browser demo artifact (`web/main.js`) rebuilt on the new toolchain;
+  headless verification 5/5
+
+### Verified
+
+- `moon check --target js/wasm/native --deny-warn` zero warnings;
+  `moon test --deny-warn` 269 (js) / 258 (wasm); `moon fmt --check`;
+  interface files regenerated (`moon info` — extends surface as public
+  methods in `pkg.generated.mbti`)
+
 ## [0.3.0] - 2026-09-25
 
 ### Added

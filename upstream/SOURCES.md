@@ -21,8 +21,8 @@
 | formOptions.spec.ts | `b716983dc87d36ad6ee9e7b9a3ddf3ccee28a5ff` | 译文覆盖（1 test） |
 | transform.spec.ts | `f67b39352c9ec0ea25bf08122789121887289ce2` | 译文覆盖（1 test） |
 | utils.spec.ts | `29d9a53a006646993c5eec6e38221cfb00579d95` | **豁免**（83 tests，dot-path 机器被 lens→key 取代） |
-| FormGroupApi.spec.ts | `02d684fc1bc3c57c69d63b5cf57d00a442732313` | **豁免**（31 tests，范围外：嵌套表单组） |
-| FieldGroupApi.spec.ts | `2ff20790dad42841be96e4acfd802a055eadfa3f` | **豁免**（20 tests，同上） |
+| FormGroupApi.spec.ts | `02d684fc1bc3c57c69d63b5cf57d00a442732313` | 译文覆盖（26/31 tests，2026-09-25；余 5 篇 onDynamic/revalidateLogic 豁免 D-P3） |
+| FieldGroupApi.spec.ts | `2ff20790dad42841be96e4acfd802a055eadfa3f` | lens 组合等价译文（16/20 tests，2026-09-25；4 篇字符串重映射机器随设计吞并 D-P8） |
 | mergeForm.spec.ts | `972b6772fa96af8e5f6f3cf027036e74a1e30566` | **豁免**（11 tests，SSR 场景） |
 | utils.ts | `5e4d0305ec2fed0a268c54379018c1a67a8f3f90` | 测试辅助（sleep 等），仅参照 |
 
