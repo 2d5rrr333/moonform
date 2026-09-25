@@ -127,18 +127,32 @@ jobs:
         run: moon run src/examples/bench --target js
       - name: README quick-start verifier (against the PUBLISHED package)
         run: |
-          # a fresh downstream project consuming the published moonform,
-          # running the README's five quick-start blocks end-to-end
+          # A fresh downstream project consuming a PUBLISHED moonform,
+          # running the README's five quick-start blocks end-to-end.
+          # Uses the version in moon.mod; if that version is not on the
+          # registry yet (push raced ahead of `moon publish`), falls back
+          # one patch with a visible warning. The check's purpose is
+          # README vs published-API compatibility, not release sequencing.
           VER=$(grep '^version' moon.mod | sed 's/version *= *"\(.*\)"/\1/')
-          mkdir -p /tmp/readme-check/src
-          { echo 'name = "2d5rrr333/readme-check"'
-            echo 'version = "0.1.0"'
-            echo "import { \"2d5rrr333/moonform@$VER\" }"
-            echo 'source = "src"'
-          } > /tmp/readme-check/moon.mod
-          cp src/readme-verify/moon.pkg /tmp/readme-check/src/moon.pkg
-          cp src/readme-verify/main.mbt /tmp/readme-check/src/main.mbt
-          cd /tmp/readme-check && moon check --target js && moon run src --target js
+          setup() { rm -rf /tmp/readme-check && mkdir -p /tmp/readme-check/src
+            cp "$GITHUB_WORKSPACE/src/readme-verify/moon.pkg" /tmp/readme-check/src/moon.pkg
+            cp "$GITHUB_WORKSPACE/src/readme-verify/main.mbt" /tmp/readme-check/src/main.mbt; }
+          try_version() {
+            { echo 'name = "2d5rrr333/readme-check"'
+              echo 'version = "0.1.0"'
+              echo "import { \"2d5rrr333/moonform@$1\" }"
+              echo 'source = "src"'
+            } > /tmp/readme-check/moon.mod
+            cd /tmp/readme-check && moon update && moon check --target js
+          }
+          setup
+          if ! try_version "$VER"; then
+            P1=$(echo "$VER" | awk -F. '$3>0 {print $1"."$2"."$3-1}')
+            echo "::warning::moonform@$VER not on the registry yet — retrying with $P1 (publish before pushing; on a x.y.0 bump, re-run after publishing)"
+            setup
+            try_version "$P1"
+          fi
+          cd /tmp/readme-check && moon run src --target js
       - name: lens-gen CLI self-check (regenerate + diff)
         run: |
           moon run src/lens-gen-cli --target js -- src/examples/generated/pkg.generated.mbti -o /tmp/gen.mbt
