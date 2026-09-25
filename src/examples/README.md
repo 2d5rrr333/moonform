@@ -112,6 +112,19 @@ moon run src/examples/isomorphic-server --target native   # 需 C 编译器（CI
 3. **同构性本身**：`isomorphic` 的黑盒测试在 js/wasm/native 三目标运行
    （CI 三份 test 作业各跑一遍）——同一断言跨目标成立
 
+## bench —— 500 字段性能基准
+
+`bench`（js）对 500 字段的数组表单计时跑通全流程：挂载、逐字段带校验写入、
+桥接快照所依赖的派生状态扫描（100 轮）、组派生检查、remove(0) 触发的整表
+meta 迁移——每步带正确性断言（既是基准也是规模回归测试）。
+
+```bash
+moon run src/examples/bench --target js
+# → bench: mount 500 fields: ~9ms / 500 validated writes: ~9ms /
+#   100x derived sweeps: ~26ms / remove(0) migrating 500 slots: ~2ms
+#   bench: all checks passed
+```
+
 ### 包结构说明
 
 - `core` / `rules`：零依赖（moon.mod 的 `deps` 仅为 react 示例与适配层存在）

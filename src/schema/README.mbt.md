@@ -3,6 +3,79 @@
 The `mbt check` blocks below are executed as tests by `moon test`
 (documentation that cannot rot).
 
+## A compiled schema as a per-field validator
+
+```mbt check
+///|
+struct DocLogin {
+  username : String
+  password : String
+} derive(Eq, ToJson, Debug)
+
+///|
+pub extend DocLogin with Eq::{not_equal, equal}
+
+///|
+pub extend DocLogin with ToJson::{to_json}
+
+///|
+pub extend DocLogin with Debug::{to_repr}
+
+///|
+fn doc_login_username_l() -> @core.Lens[DocLogin, String] {
+  @core.field("username", (v : DocLogin) => v.username, (v, u) => {
+    ..v,
+    username: u,
+  })
+}
+
+///|
+fn doc_login_password_l() -> @core.Lens[DocLogin, String] {
+  @core.field("password", (v : DocLogin) => v.password, (v, p) => {
+    ..v,
+    password: p,
+  })
+}
+
+///|
+test "doc: schema_field_validator feeds the field's own error slot" {
+  let s = @builder.object({
+    "username": @builder.string().min_len(2),
+    "password": @builder.string().min_len(8),
+  }).compile() catch {
+    _ => abort("schema compile failed")
+  }
+  let form = @core.FormApi::make({ username: "", password: "", })
+  let username = form.field(
+    doc_login_username_l(),
+    on_change_validate=@schema.schema_field_validator(
+      s,
+      "username",
+      doc_login_username_l(),
+    ),
+  )
+  let password = form.field(
+    doc_login_password_l(),
+    on_change_validate=@schema.schema_field_validator(
+      s,
+      "password",
+      doc_login_password_l(),
+    ),
+  )
+  username.mount()
+  password.mount()
+  // each field sees only its own JSON-Pointer ("/username", "/password")
+  username.set_value("x")
+  password.set_value("short")
+  assert_eq(username.meta().errors().length(), 1)
+  assert_eq(password.meta().errors().length(), 1)
+  // fixing each field clears its own slot only
+  username.set_value("ok")
+  assert_eq(username.meta().errors(), [])
+  assert_eq(password.meta().errors().length(), 1)
+}
+```
+
 ## A compiled schema as a group validator
 
 ```mbt check

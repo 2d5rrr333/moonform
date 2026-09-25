@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.2] - 2026-09-25
+
+### Documentation
+
+- **Doc-test coverage gaps filled** (a documentation audit found every
+  user-facing package documented, but not every feature):
+  - `core/README.mbt.md`: new "Field reset and subtree subscriptions"
+    section — `subscribe_under` (the prefix subscription behind
+    GroupBridge) and `FieldApi::reset`
+  - `schema/README.mbt.md`: new "schema as a per-field validator" section
+    — `schema_field_validator` feeding per-field slots (previously only
+    the group validator had a doc test)
+  - `examples/README.md`: bench section (500-field timing smoke, what each
+    phase measures)
+- Audit results folded in: all pub APIs carry `///` doc comments (100%
+  coverage); counts verified consistent across README/CHANGELOG/status
+  notes
+
+### Tests
+
+- 308 tests on js, 288 on wasm (+2 doc tests)
+
 ## [0.8.1] - 2026-09-25
 
 ### Fixed

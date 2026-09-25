@@ -146,7 +146,8 @@ fn username_l() -> @core.Lens[Signup, String] {
 
 ///|
 test "doc: onChange validation fills the error slot" {
-  let form = @core.FormApi::make({ username: "", })
+  let signup_default : Signup = { username: "", }
+  let form = @core.FormApi::make(signup_default)
   let username = form.field(
     username_l(),
     on_change_validate=@core.validator(v => {
@@ -347,6 +348,66 @@ test "doc: group validator distributes field errors; group submit is form-safe" 
   )
   inspect(submitted.n, content="1") // re-validated and passed
   inspect(step1.errors().length(), content="0")
+}
+```
+
+## Field reset and subtree subscriptions
+
+```mbt check
+///|
+struct Pref {
+  account : PrefAccount
+} derive(Eq, Debug)
+
+///|
+pub extend Pref with Eq::{not_equal, equal}
+
+///|
+pub extend Pref with Debug::{to_repr}
+
+///|
+struct PrefAccount {
+  username : String
+} derive(Eq, Debug)
+
+///|
+pub extend PrefAccount with Eq::{not_equal, equal}
+
+///|
+pub extend PrefAccount with Debug::{to_repr}
+
+///|
+fn pref_account_l() -> @core.Lens[Pref, PrefAccount] {
+  @core.field("account", (v : Pref) => v.account, (_v, a) => { account: a, })
+}
+
+///|
+fn pref_username_l() -> @core.Lens[Pref, String] {
+  pref_account_l().compose(
+    @core.field("username", (a : PrefAccount) => a.username, (_a, u) => {
+      username: u,
+    }),
+  )
+}
+
+///|
+test "doc: subscribe_under hears every child; reset restores defaults" {
+  let account_default : PrefAccount = { username: "", }
+  let form = @core.FormApi::make({ account: account_default, })
+  let hits = { n: 0, }
+  // a subtree (prefix) subscription fires on the prefix key itself and on
+  // every key under it — the natural adapter for group views
+  let _id = form.subscribe_under(pref_account_l().key, () => hits.n = hits.n + 1)
+  form.set_value(pref_username_l(), "moonbit")
+  inspect(hits.n, content="1") // child write heard
+  // field reset: value back to the default, meta back to pristine
+  let username = form.field(pref_username_l())
+  username.mount()
+  username.set_value("x")
+  assert_true(username.meta().is_touched)
+  username.reset()
+  inspect(username.value(), content="")
+  assert_false(username.meta().is_touched)
 }
 ```
 
