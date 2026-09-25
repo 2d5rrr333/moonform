@@ -195,6 +195,7 @@ pub fn[V] FormApi::submission_attempts(Self[V]) -> Int
 pub fn[V] FormApi::submit_error(Self[V]) -> String?
 pub fn[V] FormApi::subscribe(Self[V], () -> Unit) -> Int
 pub fn[V] FormApi::subscribe_field(Self[V], Key, kinds? : Array[ChangeKind], () -> Unit) -> Int
+pub fn[V] FormApi::subscribe_under(Self[V], Key, kinds? : Array[ChangeKind], () -> Unit) -> Int
 pub fn[V, A] FormApi::swap_values(Self[V], Lens[V, Array[A]], Int, Int, dont_update_meta? : Bool) -> Unit
 pub fn[V] FormApi::unsubscribe(Self[V], Int) -> Unit
 pub fn[V : Eq] FormApi::update(Self[V], default_values? : V, default_state? : FormDefaultState[V]) -> Unit
@@ -335,6 +336,7 @@ pub enum Seg {
 pub(all) struct Sub {
   id : Int
   key : Key?
+  prefix : Key?
   kinds : Array[ChangeKind]?
   cb : () -> Unit
 }
@@ -370,6 +372,7 @@ pub fn Subscriptions::batch(Self, () -> Unit) -> Unit
 pub fn Subscriptions::make() -> Self
 pub fn Subscriptions::subscribe(Self, () -> Unit) -> Int
 pub fn Subscriptions::subscribe_field(Self, Key, kinds? : Array[ChangeKind], () -> Unit) -> Int
+pub fn Subscriptions::subscribe_under(Self, Key, kinds? : Array[ChangeKind], () -> Unit) -> Int
 pub fn Subscriptions::unsubscribe(Self, Int) -> Unit
 
 type Timer

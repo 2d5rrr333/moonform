@@ -17,6 +17,9 @@ pub fn ChangeKind::value_and_meta() -> Array[ChangeKind] {
 pub(all) struct Sub {
   id : Int
   key : Key? // None = whole form
+  /// Some(p) = every key under p, including p itself (prefix matching
+  /// overrides `key`)
+  prefix : Key?
   kinds : Array[ChangeKind]? // None = all kinds
   cb : () -> Unit
 }
@@ -41,7 +44,7 @@ pub fn Subscriptions::make() -> Subscriptions {
 ///|
 /// Subscribe to any form change. Returns a stable handle for unsubscribe.
 pub fn Subscriptions::subscribe(self : Subscriptions, cb : () -> Unit) -> Int {
-  self.add(None, None, cb)
+  self.add(None, None, None, cb)
 }
 
 ///|
@@ -53,19 +56,34 @@ pub fn Subscriptions::subscribe_field(
   kinds? : Array[ChangeKind],
   cb : () -> Unit,
 ) -> Int {
-  self.add(Some(key), kinds, cb)
+  self.add(Some(key), None, kinds, cb)
+}
+
+///|
+/// Subscribe to changes of every key under `prefix` (including the prefix
+/// key itself), optionally only certain change kinds — the natural
+/// subscription for group/subtree adapters, whose snapshots derive from
+/// all child fields.
+pub fn Subscriptions::subscribe_under(
+  self : Subscriptions,
+  prefix : Key,
+  kinds? : Array[ChangeKind],
+  cb : () -> Unit,
+) -> Int {
+  self.add(None, Some(prefix), kinds, cb)
 }
 
 ///|
 fn Subscriptions::add(
   self : Subscriptions,
   key : Key?,
+  prefix : Key?,
   kinds : Array[ChangeKind]?,
   cb : () -> Unit,
 ) -> Int {
   let id = self.next_id
   self.next_id = id + 1
-  self.subs.push({ id, key, kinds, cb, })
+  self.subs.push({ id, key, prefix, kinds, cb, })
   id
 }
 
@@ -83,9 +101,13 @@ pub fn Subscriptions::unsubscribe(self : Subscriptions, id : Int) -> Unit {
 
 ///|
 fn sub_matches(sub : Sub, key : Key, kind : ChangeKind) -> Bool {
-  let key_ok = match sub.key {
-    None => true
-    Some(k) => k == key
+  let key_ok = match sub.prefix {
+    Some(p) => key.has_prefix(p)
+    None =>
+      match sub.key {
+        None => true
+        Some(k) => k == key
+      }
   }
   let kind_ok = match sub.kinds {
     None => true

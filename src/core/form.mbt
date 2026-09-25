@@ -511,6 +511,22 @@ pub fn[V] FormApi::subscribe_field(
 }
 
 ///|
+/// Subscribe to changes of every key under `prefix` (including the prefix
+/// itself), optionally filtered by change kinds — the natural subscription
+/// for group/subtree adapters; returns a stable unsubscribe handle.
+pub fn[V] FormApi::subscribe_under(
+  self : FormApi[V],
+  prefix : Key,
+  kinds? : Array[ChangeKind],
+  cb : () -> Unit,
+) -> Int {
+  match kinds {
+    Some(ks) => self.subs.subscribe_under(prefix, kinds=ks, cb)
+    None => self.subs.subscribe_under(prefix, cb)
+  }
+}
+
+///|
 /// Unsubscribe by handle (stable identity; missing handle is a no-op).
 pub fn[V] FormApi::unsubscribe(self : FormApi[V], id : Int) -> Unit {
   self.subs.unsubscribe(id)

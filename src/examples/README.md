@@ -47,6 +47,49 @@ let state = @react.use_sync_external_store(
 （tiye/react 契约），参考
 [tiye/react README](https://mooncakes.io/docs/#/tiye/react/)。
 
+## wizard — FormGroup 分步表单（组级校验 + 组内提交）
+
+对应 FormGroup 能力：多步表单按步骤分组，每步独立校验/提交，
+组错误与分发到子字段的错误并存，最终整表提交以全组有效为门槛。
+
+### 无头验证（headless，本仓库 CI 可跑）
+
+```bash
+moon run src/examples/wizard --target js
+# → wizard example: all checks passed
+```
+
+验证的场景：
+
+1. **双通道组校验**：step1 的组校验器一次返回组级错误（email）+ 分发到子字段的
+   错误（username）——`is_group_valid` 与 `is_fields_valid` 各自独立翻转
+2. **组内提交不碰表单**：step1 提交成功后 `form.submission_attempts() == 0`；
+   step2 提交不改变 step1 的计数
+3. **修复后恢复**：修正字段值再提交，组快照（经 `GroupBridge` 读取）恢复
+   `is_valid`，分发到字段的错误清除
+4. **整表提交门槛**：所有组有效后 `form.handle_submit` 成功
+
+### React 组件接线（浏览器）
+
+组状态经 `GroupBridge` 消费（字段级的 FieldBridge 同理）：
+
+```moonbit
+// 组件 setup（每组一次）:
+let step1 = form.group(account_l(), on_submit_validate=account_validator())
+let bridge = @formreact.GroupBridge::make(step1)
+
+// 组件渲染函数内:
+let state = @react.use_sync_external_store(
+  notify => { handle.subscribe() ... },   // GroupBridgeHook：前缀订阅（整棵子树）
+  () => { handle.get_snapshot() },        // value/errors/is_valid/can_submit...
+)
+// 提交按钮: bridge.submit(on_group_submit=..., on_group_submit_invalid=...)
+```
+
+`GroupBridge` 用**前缀订阅**（`FormApi::subscribe_under`）监听组 key 下所有
+变化——分发到子字段的错误、touched 派生都挂在子字段上，整棵子树的任何变化
+都会刷新组快照。
+
 ### 包结构说明
 
 - `core` / `rules`：零依赖（moon.mod 的 `deps` 仅为 react 示例与适配层存在）

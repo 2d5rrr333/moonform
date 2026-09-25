@@ -226,3 +226,87 @@ test "subscription: reset notifies every subscriber" {
   assert_eq(form_hits.n, 1)
   assert_eq(field_hits.n, 1)
 }
+
+// -- prefix (subtree) subscriptions --------------------------------------------------
+
+///|
+struct SubNested {
+  first : String
+  last : String
+} derive(Eq, Debug)
+
+///|
+struct SubOuter {
+  user : SubNested
+  other : String
+} derive(Eq, Debug)
+
+///|
+fn sub_user_first_l() -> Lens[SubOuter, String] {
+  field("user", (o : SubOuter) => o.user, (o, u) => { ..o, user: u, }).compose(
+    field("first", (n : SubNested) => n.first, (n, f) => { ..n, first: f, }),
+  )
+}
+
+///|
+fn sub_user_last_l() -> Lens[SubOuter, String] {
+  field("user", (o : SubOuter) => o.user, (o, u) => { ..o, user: u, }).compose(
+    field("last", (n : SubNested) => n.last, (n, l) => { ..n, last: l, }),
+  )
+}
+
+///|
+fn sub_other_l() -> Lens[SubOuter, String] {
+  field("other", o => o.other, (o, s) => { ..o, other: s, })
+}
+
+///|
+test "subscription: subscribe_under fires on the prefix key and every child" {
+  let form = FormApi::make({ user: { first: "", last: "", }, other: "", })
+  let hits = { n: 0, }
+  let _id = form.subscribe_under(Key::field("user"), () => hits.n = hits.n + 1)
+  form.set_value(sub_user_first_l(), "a") // child of the prefix
+  assert_eq(hits.n, 1)
+  form.set_value(sub_user_last_l(), "b") // another child
+  assert_eq(hits.n, 2)
+  form.set_value(sub_other_l(), "x") // outside the prefix
+  assert_eq(hits.n, 2)
+}
+
+///|
+test "subscription: subscribe_under covers the prefix key itself" {
+  let form = FormApi::make({ user: { first: "", last: "", }, other: "", })
+  let hits = { n: 0, }
+  let user_l : Lens[SubOuter, SubNested] = field("user", o => o.user, (o, u) => {
+    ..o,
+    user: u,
+  })
+  let _id = form.subscribe_under(user_l.key, () => hits.n = hits.n + 1)
+  form.set_value(user_l, { first: "a", last: "b", }) // the prefix key itself
+  assert_eq(hits.n, 1)
+}
+
+///|
+test "subscription: subscribe_under respects change-kind filters" {
+  let form = FormApi::make({ user: { first: "", last: "", }, other: "", })
+  let value_hits = { n: 0, }
+  let _id = form.subscribe_under(Key::field("user"), kinds=[Value], () => {
+    value_hits.n = value_hits.n + 1
+  })
+  form.set_value(sub_user_first_l(), "a") // Value + Meta fires Value only
+  assert_eq(value_hits.n, 1)
+  form.blur_field(sub_user_first_l().key) // Meta only: filtered out
+  assert_eq(value_hits.n, 1)
+}
+
+///|
+test "subscription: unsubscribe stops prefix notifications" {
+  let form = FormApi::make({ user: { first: "", last: "", }, other: "", })
+  let hits = { n: 0, }
+  let id = form.subscribe_under(Key::field("user"), () => hits.n = hits.n + 1)
+  form.set_value(sub_user_first_l(), "a")
+  assert_eq(hits.n, 1)
+  form.unsubscribe(id)
+  form.set_value(sub_user_first_l(), "b")
+  assert_eq(hits.n, 1) // no further notifications
+}
