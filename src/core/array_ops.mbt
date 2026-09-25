@@ -52,6 +52,9 @@ pub fn[V, A] FormApi::push_value(
 /// Insert a value at `index` (upstream `insertFieldValue`): elements at
 /// `index` and above shift up; an out-of-range index appends to the end.
 /// The new slot starts without meta (upstream clears inserted slots).
+/// Meta remaps BEFORE the value write so the group change re-validation
+/// (dispatched by the write) sees a meta layout consistent with the new
+/// values — remapping after would scramble the freshly distributed errors.
 pub fn[V, A] FormApi::insert_value(
   self : FormApi[V],
   lens : Lens[V, Array[A]],
@@ -61,6 +64,8 @@ pub fn[V, A] FormApi::insert_value(
 ) -> Unit {
   let len = lens.get(self.values).length()
   let i = if index < 0 { 0 } else if index > len { len } else { index }
+  self.meta.remap_insert(lens.key, i)
+  self.meta.bump_array_version(lens.key)
   self.array_op_write(
     lens,
     xs => {
@@ -78,13 +83,13 @@ pub fn[V, A] FormApi::insert_value(
     },
     dont_update_meta=dont_update_meta.unwrap_or(false),
   )
-  self.meta.bump_array_version(lens.key)
-  self.meta.remap_insert(lens.key, i)
 }
 
 ///|
 /// Remove the value at `index` (upstream `removeFieldValue`): elements above
-/// shift down; the vacated last slot's meta subtree is deleted.
+/// shift down; the vacated last slot's meta subtree is deleted. Meta
+/// remaps BEFORE the value write (see insert_value) so the group change
+/// re-validation sees a consistent layout.
 pub fn[V, A] FormApi::remove_value(
   self : FormApi[V],
   lens : Lens[V, Array[A]],
@@ -93,6 +98,8 @@ pub fn[V, A] FormApi::remove_value(
 ) -> Unit {
   let old = lens.get(self.values)
   let last_index = if old.length() > 0 { old.length() - 1 } else { 0 }
+  self.meta.remap_remove(lens.key, index)
+  self.meta.bump_array_version(lens.key)
   self.array_op_write(
     lens,
     xs => {
@@ -106,8 +113,6 @@ pub fn[V, A] FormApi::remove_value(
     },
     dont_update_meta=dont_update_meta.unwrap_or(false),
   )
-  self.meta.bump_array_version(lens.key)
-  self.meta.remap_remove(lens.key, index)
   // delete the vacated last slot (upstream deletes `${field}[${lastIndex}]`)
   self.delete_field(lens.key.push_idx(last_index))
 }
@@ -122,6 +127,8 @@ pub fn[V, A] FormApi::swap_values(
   index2 : Int,
   dont_update_meta? : Bool,
 ) -> Unit {
+  self.meta.remap_swap(lens.key, index1, index2)
+  self.meta.bump_array_version(lens.key)
   self.array_op_write(
     lens,
     xs => {
@@ -137,8 +144,6 @@ pub fn[V, A] FormApi::swap_values(
     },
     dont_update_meta=dont_update_meta.unwrap_or(false),
   )
-  self.meta.bump_array_version(lens.key)
-  self.meta.remap_swap(lens.key, index1, index2)
 }
 
 ///|
@@ -151,6 +156,8 @@ pub fn[V, A] FormApi::move_value(
   to : Int,
   dont_update_meta? : Bool,
 ) -> Unit {
+  self.meta.remap_move(lens.key, from, to)
+  self.meta.bump_array_version(lens.key)
   self.array_op_write(
     lens,
     xs => {
@@ -172,8 +179,6 @@ pub fn[V, A] FormApi::move_value(
     },
     dont_update_meta=dont_update_meta.unwrap_or(false),
   )
-  self.meta.bump_array_version(lens.key)
-  self.meta.remap_move(lens.key, from, to)
 }
 
 ///|

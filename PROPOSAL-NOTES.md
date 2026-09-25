@@ -1,7 +1,7 @@
 # moonform 项目说明素材
 
 > 本文件是项目的事实素材库，汇总可验证的项目事实，按"价值定位 / 交付范围 /
-> 实现路径"三个维度组织。数据截至 0.8.0。
+> 实现路径"三个维度组织。数据截至 0.8.1。
 
 ## 项目概况
 
@@ -9,7 +9,7 @@
 |---|---|
 | 项目名称 | moonform — MoonBit 原生 headless 表单状态库 |
 | GitHub 仓库 | https://github.com/2d5rrr333/moonform（master） |
-| 发布 | mooncakes.io `2d5rrr333/moonform@0.8.0`（0.1.0 → 0.8.0 共 10 版） |
+| 发布 | mooncakes.io `2d5rrr333/moonform@0.8.1`（0.1.0 → 0.8.1 共 11 版） |
 | 参考项目 | TanStack Form（@tanstack/form-core）https://github.com/TanStack/form — MIT。**语义移植而非代码移植**：以 form-core@1.33.5（v1 终点版，已验证与 main 逐字节一致）的上游测试集为行为规格，MoonBit 原生实现 |
 | 方向/通用性 | Web 基础设施：表单状态管理是所有 Web 应用的高频需求 |
 
@@ -80,14 +80,15 @@
 
 - 自有 MoonBit 代码 ~10,400 行 .mbt（其中测试 ~4,750 行；另有 vendored moonschema
   ~3,600 行已隔离披露，本地补丁逐条记录于 vendor NOTICE.md）
-- 测试 302（js）/ 282（wasm）全绿；native CI 通过；三目标 `moon check --deny-warn`
+- 测试 306（js）/ 286（wasm）全绿；native CI 通过；三目标 `moon check --deny-warn`
   0 警告；`moon fmt --check` 通过；接口文件随 CI 漂移守卫同步
 - CI（GitHub Actions）五作业全绿：check×3 目标（含 fmt + 接口漂移守卫）、
   test×3 目标、示例运行
 - 浏览器 demo：无头 Edge 15 项检查全过（登录 5：渲染/错误呈现/清除/提交；
   向导 10：schema 分发/组拦截/步骤流转/双通道校验/异步提交中态/完成）
-- 已发布：mooncakes.io `2d5rrr333/moonform@0.8.0`
+- 已发布：mooncakes.io `2d5rrr333/moonform@0.8.1`
 - 开源合规：MIT；上游 TanStack Form MIT（upstream/ 附许可文本与 SHA 溯源）；
   vendored moonschema Apache-2.0（保留其 LICENSE + 本地修改披露）；差异对照表 PARITY.md
-- 过程质量：真实 bug 修复 4 例均由测试暴露（数组过期索引崩溃、React notify 契约、
-  组提交后 stale 分发错误、组 onMount 错误永不清除）
+- 过程质量：真实 bug 修复 6 例均由测试暴露（数组过期索引崩溃、React notify 契约、
+  组提交后 stale 分发错误、组 onMount 错误永不清除、数组操作×组分发的迁移时序、
+  组清理无中生有 meta 条目）

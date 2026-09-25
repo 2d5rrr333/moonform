@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2026-09-25
+
+### Fixed
+
+Both surfaced by a group × structural-change edge-case audit:
+
+- **Array operations scrambled group-distributed errors**: ops wrote the
+  value first (dispatching the containing group's change re-validation
+  against the OLD meta layout) and remapped meta afterwards — the freshly
+  distributed errors then got shifted again by the remap, landing on the
+  wrong elements. insert/remove/swap/move now remap meta BEFORE the value
+  write, so the re-validation dispatch sees a layout consistent with the
+  new values. Guarded by a new test (distributed errors migrate across a
+  remove and the group re-syncs against the new indices)
+- **Group cleanup could materialize meta entries out of thin air**: both
+  clear paths (stale-slot clearing on re-validation, unmount cleanup)
+  called `meta.update`, which INSERTS a default entry for absent keys —
+  re-creating entries for vacated array slots and deleted fields, breaking
+  the "unmounted fields have no meta entry" contract. Clearing now skips
+  absent keys. Guarded by tests (delete_field under a group; vacated-slot
+  hygiene after remove)
+
+### Added
+
+- Edge-case tests pinning group × structural-change semantics: form
+  `update` preserves a mounted group's registration and submission/error
+  state; a group's Submit error slot persists through value changes and
+  clears on re-submission (mirroring field-level slot semantics)
+
+### Tests
+
+- 306 tests on js, 286 on wasm
+
 ## [0.8.0] - 2026-09-25
 
 ### Added

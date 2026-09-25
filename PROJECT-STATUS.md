@@ -1,12 +1,12 @@
 # moonform 项目状态速查
 
-> 用途：新会话打开时把本文件发给编程助手，即可无缝接续。最后更新：2026-09-25（0.8.0）。
+> 用途：新会话打开时把本文件发给编程助手，即可无缝接续。最后更新：2026-09-25（0.8.1）。
 
 ## 项目是什么
 
 **moonform** — MoonBit 原生 headless 表单状态库，语义对标 TanStack form-core@1.33.5（SHA 已验证 = main 分支）。
 - 仓库：https://github.com/2d5rrr333/moonform（master）
-- mooncakes：`2d5rrr333/moonform`（0.1.x–0.7.1 全部在线，latest=0.8.0）
+- mooncakes：`2d5rrr333/moonform`（0.1.x–0.7.1 全部在线，latest=0.8.1）
 - OpenSpec：变更 `add-moonform-core` 已归档，主 specs 在 `openspec/specs/moonform/`（7 capability）
 - 位置：`D:\code\moonbit\moonform`（workspace 根 `D:\code\moonbit`，其 openspec/ 记录了对账）
 
@@ -17,7 +17,7 @@
 新工具链的两个迁移要求已全库完成：
 1. `implicit_impl_as_method`：所有 derive/显式 impl 需要 `pub extend T with Trait::{...}`（已加 136 处，含 vendor 补丁——披露在 src/vendor/moonschema/NOTICE.md）
 2. `test_unqualified_package`：黑盒测试引用本包项需限定（@rules./@react./@schema.）；连字符包名（lens-gen）自引用别名不可用 → 其测试已转白盒（lens_gen_wbtest.mbt）
-另：README.mbt.md 的 doc 测试块标记若被破坏会**静默**不编译不计数（` ```mbt check ` 三反引号），改动后务必核对测试总数（js 302）。
+另：README.mbt.md 的 doc 测试块标记若被破坏会**静默**不编译不计数（` ```mbt check ` 三反引号），改动后务必核对测试总数（js 306）。
 
 ## 包结构
 
@@ -39,8 +39,8 @@
 
 ```bash
 cd moonform
-moon test --target js --deny-warn       # 302
-moon test --target wasm --deny-warn     # 282
+moon test --target js --deny-warn       # 306
+moon test --target wasm --deny-warn     # 286
 moon check --target js/wasm/native --deny-warn   # 0 警告
 moon fmt --check
 moon info                                # 接口文件同步（pkg.generated.mbti）
@@ -68,6 +68,7 @@ node tools/headless-verify.cjs          # login 5 + wizard 10（含异步提交�
 - 0.7.0：examples/isomorphic（场景 2 落地：共享校验定义，js 客户端 + native 服务端，CI 双目标跑）+ SOURCES.md 修悬空引用
 - 0.7.1：热路径优化（has_prefix 零分配、has_errors 早退、派生状态首中即返/单遍扫描）+ examples/bench（500 字段计时基准，CI 跑）+ 规模冒烟测试
 - 0.8.0：rules one_of/one_of_str + rules/react doc 测试（四个用户面包全部带可执行文档）
+- 0.8.1：**修复 bug×2**（数组操作先写值后迁移 meta，打乱组分发错误 → 改为先迁移；组清理对缺失 key 无中生有建 meta 条目 → 跳过缺失 key）+ 组×结构变更边界测试（update/delete_field/数组×组）
 
 ## 关键技术事实（避免重新踩坑）
 
@@ -87,8 +88,8 @@ node tools/headless-verify.cjs          # login 5 + wizard 10（含异步提交�
 
 ## 未完事项
 
-1. **0.8.0 发布**：moon publish（版本已 bump，CHANGELOG/README 已就绪）
-2. 申报书：需用户人工撰写，素材在 PROPOSAL-NOTES.md（已刷新至 0.8.0 口径）
+1. **0.8.1 发布**：moon publish（版本已 bump，CHANGELOG/README 已就绪）
+2. 申报书：需用户人工撰写，素材在 PROPOSAL-NOTES.md（已刷新至 0.8.1 口径）
 3. 可选后续：moonschema 上游正式发布后解除 vendor、lens-gen CLI 化、mergeForm/SSR（lens-gen CLI 已完成）
 4. 章程要求：仓库文件中不得出现特定自动化工具类字样（已全库清理；web/vendor 与构建产物中的第三方压缩/生成标识符除外）
 

@@ -409,15 +409,17 @@ fn[V, G] FormGroupApi::apply_result(
     self.form.subs.notify(full, Meta)
     fresh.push(fe.key)
   }
-  // clear stale distributed slots for this cause, keep the rest
+  // clear stale distributed slots for this cause, keep the rest.
+  // Only entries that still exist are cleared — meta.update would INSERT
+  // a default entry for absent keys (a vacated array slot after an
+  // operation, or a field deleted via delete_field), breaking the
+  // "unmounted fields have no meta entry" contract.
   let kept : Array[(ValidationCause, Key)] = []
   for pair in self.owned_field_errors {
     let (c, k) = pair
     let re_listed = key_listed(fresh, k)
     if c == cause && !re_listed {
-      let full = self.lens.key.concat(k)
-      self.form.meta.update(full, m => m.with_cause_errors(cause, None))
-      self.form.subs.notify(full, Meta)
+      self.clear_distributed_slot(cause, k)
     } else {
       kept.push(pair)
     }
@@ -461,16 +463,34 @@ fn owned_listed(
 
 ///|
 /// Clear every field slot this group distributed (unmount cleanup).
+/// Absent keys are skipped — clearing must never materialize a meta
+/// entry (see apply_result).
 fn[V, G] FormGroupApi::clear_owned_field_errors(
   self : FormGroupApi[V, G],
 ) -> Unit {
   for pair in self.owned_field_errors {
     let (c, k) = pair
-    let full = self.lens.key.concat(k)
-    self.form.meta.update(full, m => m.with_cause_errors(c, None))
-    self.form.subs.notify(full, Meta)
+    self.clear_distributed_slot(c, k)
   }
   self.owned_field_errors = []
+}
+
+///|
+/// Clear one distributed cause slot for relative key `k` — a no-op when
+/// the target entry no longer exists (vacated array slot / deleted field).
+fn[V, G] FormGroupApi::clear_distributed_slot(
+  self : FormGroupApi[V, G],
+  cause : ValidationCause,
+  k : Key,
+) -> Unit {
+  let full = self.lens.key.concat(k)
+  match self.form.meta.get(full) {
+    Some(_) => {
+      self.form.meta.update(full, m => m.with_cause_errors(cause, None))
+      self.form.subs.notify(full, Meta)
+    }
+    None => ()
+  }
 }
 
 ///|
