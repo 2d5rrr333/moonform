@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-09-25
+
+### Added
+
+- **`react`: `FormBridge` + `use_form`** — the whole-form counterpart of
+  FieldBridge/GroupBridge, completing the bridge trio: a stable form-level
+  snapshot (is_submitting / is_submitted / is_submit_successful,
+  is_validating, is_valid_fields, can_submit, is_touched / is_blurred,
+  submission_attempts, form-level submit_error) refreshed by a whole-form
+  subscription; `bridge.submit` wires the submit button
+- **`react`: `real_clock()`** — the js host adapter for the core Clock
+  protocol (real timers behind the same injectable protocol the
+  VirtualClock drives deterministically in tests; deviation D-P7's host
+  story, now shipped). Core gains `Clock::make` as the host-adapter entry
+  point
+- **`core`: nested-group dispatch coverage** — a change deep inside
+  nested groups dispatches every containing group (each runs its onChange
+  listener and change validation; the form-level onChangeGroup listener
+  fires once per containing group); regression test added
+- **Browser wizard demo: asynchronous final submit** — the whole-form
+  submission runs through the real-clock host adapter; the Finish button
+  enters a disabled "Submitting..." in-flight state driven by the
+  FormBridge snapshot, completing after 600ms. Headless verification
+  grows from 14 to **15 checks** (login 5 + wizard 10)
+
+### Tests
+
+- 284 tests on js (5 FormBridge contract tests, 1 real_clock surface
+  test, 1 nested-groups test), 267 on wasm
+
 ## [0.4.0] - 2026-09-25
 
 ### Added

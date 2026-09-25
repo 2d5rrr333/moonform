@@ -1,6 +1,6 @@
 name = "2d5rrr333/moonform"
 
-version = "0.4.0"
+version = "0.5.0"
 
 import {
   "tiye/dom-ffi@0.4.0",

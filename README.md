@@ -1,4 +1,4 @@
-﻿# moonform
+# moonform
 
 MoonBit 原生 headless 表单状态库。**Architecture inspired by [TanStack Form](https://github.com/TanStack/form)**（MIT）。
 
@@ -52,7 +52,7 @@ moon add 2d5rrr333/moonform/rules
 | `core` | 零 | 状态机、Key/Lens、MetaStore、订阅、Clock、Validator、FormGroup、提交编排 |
 | `rules` | 零 | required/min/max/length/pattern/contains/equals/non_blank/numeric/must_be_true/自定义闭包 |
 | `schema` | vendor moonschema | moonschema 适配（JSON-Pointer 错误路径 → 字段错误槽） |
-| `react` | tiye/react | FieldBridge + use_field、GroupBridge + use_group（js 目标） |
+| `react` | tiye/react | FieldBridge + use_field、GroupBridge + use_group、FormBridge + use_form、real_clock 宿主时钟（js 目标） |
 | `lens-gen` | 零 | .mbti 驱动的访问器代码生成器（增量增强） |
 | `examples/login` | 全部 | 登录表单示例（headless 验证可跑） |
 | `examples/wizard` | 全部 | FormGroup 分步表单示例（headless 验证可跑） |
@@ -165,14 +165,34 @@ let gstate = @react.use_sync_external_store(
 gbridge.submit(on_group_submit=(v, _) => submit_step1(v))
 ```
 
+表单级状态（React）——`FormBridge` 订阅整个表单，驱动提交按钮态与表单级错误：
+
+```moonbit
+let fbridge = @formreact.FormBridge::make(form)
+let fhandle = @formreact.use_form_handle(fbridge)
+let fstate = @react.use_sync_external_store(
+  () => fhandle.subscribe(),
+  () => fhandle.get_snapshot(),
+)
+// fstate.is_submitting / fstate.can_submit / fstate.submit_error ...
+fbridge.submit(submit_options=...)
+```
+
+真实时钟（js 宿主）——测试里用虚拟时钟，宿主里桥接真实定时器（同一协议）：
+
+```moonbit
+let form = @core.FormApi::make(values).with_clock(@formreact.real_clock())
+// 防抖/异步提交走真实时间；测试中换成 VirtualClock 即确定性推进
+```
+
 更多见 [examples/README](src/examples/README.md)。**浏览器 demo**（登录表单 +
-FormGroup 分步表单，无头浏览器 14 项检查全过）：[web/](web/README.md)。
+FormGroup 分步表单，无头浏览器 15 项检查全过）：[web/](web/README.md)。
 
 ## 测试与验收
 
 ```bash
-moon test --target js      # 277 tests（含上游译文 + 文档测试）
-moon test --target wasm    # 266 tests
+moon test --target js      # 284 tests（含上游译文 + 文档测试）
+moon test --target wasm    # 267 tests
 moon test --target native  # CI 已验证（GitHub Actions 五作业全绿）
 moon run src/examples/login --target js   # 示例验收
 ```

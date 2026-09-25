@@ -55,7 +55,7 @@ self-claimed).
 | `core` | none | state machine, Key/Lens, MetaStore, subscriptions, Clock, Validator, FormGroup, submit |
 | `rules` | none | required/min/max/length/pattern/contains/equals/non_blank/numeric/must_be_true/custom closures |
 | `schema` | vendored moonschema | moonschema adapter (JSON-Pointer error paths → field slots) |
-| `react` | tiye/react | FieldBridge + use_field, GroupBridge + use_group (js target) |
+| `react` | tiye/react | FieldBridge + use_field, GroupBridge + use_group, FormBridge + use_form, real_clock host clock (js target) |
 | `lens-gen` | none | .mbti-driven accessor generator (incremental enhancement) |
 | `examples/login` | all | login form example (headless-verified) |
 | `examples/wizard` | all | FormGroup multi-step form example (headless-verified) |
@@ -169,13 +169,35 @@ let gstate = @react.use_sync_external_store(
 gbridge.submit(on_group_submit=(v, _) => submit_step1(v))
 ```
 
-More in [examples/README](src/examples/README.md). **Browser demos** (login form + FormGroup multi-step wizard, 14 headless browser checks): [web/](web/README.md).
+Whole-form state (React) — `FormBridge` subscribes to the whole form,
+driving submit-button state and form-level errors:
+
+```moonbit
+let fbridge = @formreact.FormBridge::make(form)
+let fhandle = @formreact.use_form_handle(fbridge)
+let fstate = @react.use_sync_external_store(
+  () => fhandle.subscribe(),
+  () => fhandle.get_snapshot(),
+)
+// fstate.is_submitting / fstate.can_submit / fstate.submit_error ...
+fbridge.submit(submit_options=...)
+```
+
+Real clock (js hosts) — virtual in tests, real timers in hosts, one protocol:
+
+```moonbit
+let form = @core.FormApi::make(values).with_clock(@formreact.real_clock())
+// debounce / async submission run on real time; swap in the VirtualClock
+// in tests for deterministic advancement
+```
+
+More in [examples/README](src/examples/README.md). **Browser demos** (login form + FormGroup multi-step wizard, 15 headless browser checks): [web/](web/README.md).
 
 ## Tests & acceptance
 
 ```bash
-moon test --target js      # 277 tests (incl. upstream translations + doc-tests)
-moon test --target wasm    # 266 tests
+moon test --target js      # 284 tests (incl. upstream translations + doc-tests)
+moon test --target wasm    # 267 tests
 moon test --target native  # verified in CI (five green GitHub Actions jobs)
 moon run src/examples/login --target js   # example verification
 ```
