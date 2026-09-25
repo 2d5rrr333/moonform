@@ -1,12 +1,12 @@
 # moonform 项目状态速查
 
-> 用途：新会话打开时把本文件发给编程助手，即可无缝接续。最后更新：2026-09-25（0.8.2）。
+> 用途：新会话打开时把本文件发给编程助手，即可无缝接续。最后更新：2026-09-25（0.8.3）。
 
 ## 项目是什么
 
 **moonform** — MoonBit 原生 headless 表单状态库，语义对标 TanStack form-core@1.33.5（SHA 已验证 = main 分支）。
 - 仓库：https://github.com/2d5rrr333/moonform（master）
-- mooncakes：`2d5rrr333/moonform`（0.1.x–0.8.1 全部在线，latest=0.8.2）
+- mooncakes：`2d5rrr333/moonform`（0.1.x–0.8.1 全部在线，latest=0.8.3）
 - OpenSpec：变更 `add-moonform-core` 已归档，主 specs 在 `openspec/specs/moonform/`（7 capability）
 - 位置：`D:\code\moonbit\moonform`（workspace 根 `D:\code\moonbit`，其 openspec/ 记录了对账）
 
@@ -17,7 +17,7 @@
 新工具链的两个迁移要求已全库完成：
 1. `implicit_impl_as_method`：所有 derive/显式 impl 需要 `pub extend T with Trait::{...}`（已加 136 处，含 vendor 补丁——披露在 src/vendor/moonschema/NOTICE.md）
 2. `test_unqualified_package`：黑盒测试引用本包项需限定（@rules./@react./@schema.）；连字符包名（lens-gen）自引用别名不可用 → 其测试已转白盒（lens_gen_wbtest.mbt）
-另：README.mbt.md 的 doc 测试块标记若被破坏会**静默**不编译不计数（` ```mbt check ` 三反引号），改动后务必核对测试总数（js 308）。
+另：README.mbt.md 的 doc 测试块标记若被破坏会**静默**不编译不计数（` ```mbt check ` 三反引号），改动后务必核对测试总数（js 317）。
 
 ## 包结构
 
@@ -39,8 +39,8 @@
 
 ```bash
 cd moonform
-moon test --target js --deny-warn       # 308
-moon test --target wasm --deny-warn     # 288
+moon test --target js --deny-warn       # 317
+moon test --target wasm --deny-warn     # 293
 moon check --target js/wasm/native --deny-warn   # 0 警告
 moon fmt --check
 moon info                                # 接口文件同步（pkg.generated.mbti）

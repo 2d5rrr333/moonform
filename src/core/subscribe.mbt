@@ -125,7 +125,11 @@ fn sub_matches(sub : Sub, key : Key, kind : ChangeKind) -> Bool {
 }
 
 ///|
-/// Record (or fire) a change of `kind` on `key`.
+/// Record (or fire) a change of `kind` on `key`. Callbacks may unsubscribe
+/// (themselves or others) mid-notify: a snapshot of the subscriber list is
+/// iterated and each subscriber is re-checked for liveness after every
+/// callback, so removals take effect immediately without breaking the
+/// in-flight dispatch.
 fn Subscriptions::notify(
   self : Subscriptions,
   key : Key,
@@ -134,8 +138,9 @@ fn Subscriptions::notify(
   if self.batch_depth > 0 {
     self.pending.push((key, kind))
   } else {
-    for s in self.subs {
-      if sub_matches(s, key, kind) {
+    let snapshot = self.subs.copy()
+    for s in snapshot {
+      if self.is_live(s.id) && sub_matches(s, key, kind) {
         (s.cb)()
       }
     }
@@ -144,19 +149,24 @@ fn Subscriptions::notify(
 
 ///|
 /// Record (or fire) a change affecting every subscriber (reset, update).
+/// Mid-notify unsubscribes are honored (see `notify`).
 fn Subscriptions::notify_all(self : Subscriptions) -> Unit {
   if self.batch_depth > 0 {
     self.pending_all = true
   } else {
-    for s in self.subs {
-      (s.cb)()
+    let snapshot = self.subs.copy()
+    for s in snapshot {
+      if self.is_live(s.id) {
+        (s.cb)()
+      }
     }
   }
 }
 
 ///|
 /// Run `f` with notifications coalesced: each subscriber fires at most once
-/// at the end of the outermost batch. Batches nest.
+/// at the end of the outermost batch. Batches nest. Mid-flush unsubscribes
+/// are honored (see `notify`).
 pub fn Subscriptions::batch(self : Subscriptions, f : () -> Unit) -> Unit {
   self.batch_depth = self.batch_depth + 1
   f()
@@ -166,7 +176,11 @@ pub fn Subscriptions::batch(self : Subscriptions, f : () -> Unit) -> Unit {
     let pending_all = self.pending_all
     self.pending = []
     self.pending_all = false
-    for s in self.subs {
+    let snapshot = self.subs.copy()
+    for s in snapshot {
+      if !self.is_live(s.id) {
+        continue // unsubscribed by an earlier callback in this flush
+      }
       let mut fire = pending_all
       if !fire {
         for pair in pending {
@@ -182,6 +196,17 @@ pub fn Subscriptions::batch(self : Subscriptions, f : () -> Unit) -> Unit {
       }
     }
   }
+}
+
+///|
+/// Is the subscription with `id` still registered?
+fn Subscriptions::is_live(self : Subscriptions, id : Int) -> Bool {
+  for s in self.subs {
+    if s.id == id {
+      return true
+    }
+  }
+  false
 }
 
 ///|

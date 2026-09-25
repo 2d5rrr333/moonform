@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.3] - 2026-09-25
+
+### Fixed
+
+- **Unsubscribing mid-notify still delivered to removed subscribers** (the
+  7th test-surfaced bug): `Subscriptions::notify` / `notify_all` / the
+  batch flush iterated the subscriber array while callbacks could rebuild
+  it (an unsubscribe inside a listener) — the in-flight dispatch kept
+  iterating the stale snapshot, firing callbacks that had just been
+  removed. All three paths now iterate a snapshot and re-check liveness
+  after every callback, so removals take effect immediately without
+  breaking the dispatch. Guarded by a three-subscriber
+  unsubscribe-during-notify test
+
+### Added
+
+- Reentrancy and notification-storm tests (the paths React apps actually
+  hit): a change listener cascading writes into other fields; nested
+  batches flushing exactly once; a listener's batch-inner writes staying
+  coalesced; submit re-entered from a change listener staying bounded
+- React StrictMode double-mount tests: field and group
+  mount→unmount→mount sequences keep exactly one live registration
+  (stale-instance unmounts are no-ops); bridges attach→detach→attach
+  resubscribe cleanly; double mount/unmount are idempotent
+
+### Tests
+
+- 317 tests on js, 293 on wasm
+
 ## [0.8.2] - 2026-09-25
 
 ### Documentation
