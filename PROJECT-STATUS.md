@@ -83,7 +83,7 @@ node tools/headless-verify.cjs          # login 5 + wizard 10（含异步提交�
 - MoonBit 无 `await`；async 依赖 moonbitlang/async（wasm 不支持）→ 核心用虚拟 Clock 注入
 - React 19 无 UMD → web/ vendor 了 React 18.3.1 UMD + `ReactDOMClient` 别名 shim
 - PowerShell 5.1 `Set-Content -Encoding UTF8` 会加 BOM——批量改文件用 `[System.IO.File]::WriteAllText` + `UTF8Encoding($false)`
-- 本机网络：github.com HTTPS 偶发不可达（git push 需重试）；`moon update` 的 git 索引克隆走 127.0.0.1 代理常不可达（publish 的 HTTPS 通道正常）
+- 本机网络：github.com HTTPS 偶发不可达（git push 需重试）；`moon update` 的 git 索引克隆走 127.0.0.1 代理常不可达（**2026-09-25 已恢复**：索引重克隆成功，`2d5rrr333/moonform.index` 含 0.1.0→0.8.2 全部 12 版；且已用临时下游项目经 registry 真实拉取 0.8.2 编译运行成功——README 安装路径端到端验证过）
 - 本机无 C 编译器 → native test 只能在 CI 跑（native check 可以）
 
 ## 未完事项

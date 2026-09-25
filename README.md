@@ -16,18 +16,18 @@ moon add 2d5rrr333/moonform/core
 moon add 2d5rrr333/moonform/rules
 ```
 
-```json
-// moon.mod.json 中出现：
-"deps": { "2d5rrr333/moonform": "0.1.1" }
+```toml
+# moon.mod 中出现（以当前最新版本为准）：
+import {
+  "2d5rrr333/moonform@0.8.2",
+}
 ```
 
-```json
-// 按需在包的 moon.pkg 中引入：
-{
-  "import": [
-    "2d5rrr333/moonform/core",
-    "2d5rrr333/moonform/rules"
-  ]
+```toml
+# 按需在包的 moon.pkg 中引入：
+import {
+  "2d5rrr333/moonform/core",
+  "2d5rrr333/moonform/rules",
 }
 ```
 
