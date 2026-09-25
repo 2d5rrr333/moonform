@@ -211,7 +211,7 @@ moon run src/examples/login --target js   # example verification
 Three-target `moon check` with zero warnings; CI covers check×3 targets +
 test×3 targets + the example run ([workflow](.github/workflows/ci.yml)).
 
-Upstream parity: **185 translated tests** cover the behavior semantics of the
+Upstream parity: **157 translated tests** cover the behavior semantics of the
 form-core@1.33.5 342-case suite (FormGroup's 31 and FieldGroup's 20 included);
 exemptions (utils dot-path machinery / mergeForm / type-level tests, etc.)
 and deliberate deviations (value semantics / virtual clock / FieldGroup

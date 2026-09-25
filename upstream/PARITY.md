@@ -15,17 +15,25 @@ API（lens 访问器 + Validator 协议 + 虚拟时钟）逐场景断言。上�
 
 | 上游 spec（用例数） | 译文文件 | 译文数 | 覆盖要点 |
 |---|---|---|---|
-| FormApi.spec.ts (148) | form_wbtest / array_ops_wbtest / array_meta_wbtest / submit_wbtest / field_wbtest / parity_small_wbtest / subscribe_wbtest | 71 | 默认态/初始 state/update/reset（含字段级 default 优先、keepDefaultValues、空 reset 恢复新默认值）；值读写与 dirty；数组 7 操作（值 + meta 迁移，含嵌套数组、越界、vacated-slot 清理、array_version）；提交全流程（生命周期、校验拦截、preventDefault、异步提交、失败终态、canSubmit）；挂载/卸载/删除；订阅与批处理 |
-| FieldApi.spec.ts (106) | validation_wbtest / validation_async_wbtest / subscribe_wbtest / field_wbtest / parity_small_wbtest | 49 | onChange/onBlur/onSubmit/onMount 校验时机与槽位语义；异步 pending（is_validating）；防抖（窗口折叠、定时触发）；竞态中止（双向）；unmount 中止 in-flight；监听器 onChange/onBlur/onMount/onUnmount/onFieldUnmount（含重置表单的监听器、dont_run_listeners）；卸载保留值/交互标志/跨重挂载；未挂载字段 meta 可见性 |
-| FormGroupApi.spec.ts (31) | group_wbtest | 26 | 组挂载/卸载（监听器、onMount 组校验）；组级校验器（字符串 → 组错误、`{group, fields}` → 组错误 + 字段分发、未挂载字段延迟浮现、重叠校验器去重）；组内提交（不触碰表单提交态、字段错误短路组校验、meta 透传、修复后重校验）；isFieldsValid/isGroupValid/isValid/canSubmit 派生；form 级 onChange/onChangeGroup 监听器（独立防抖）；组 set_value 只触发 onChangeGroup；异步组校验 unmount 竞态中止 |
-| FieldGroupApi.spec.ts (20) | fieldgroup_equiv_wbtest | 16 | 以 lens 组合等价译文覆盖：默认值继承/状态同步；相对字段寻址的校验/读值/读 meta；数组元素写入与 7 种数组操作经组合 lens；嵌套组合；重映射 lens（firstName→a）；组合键上的 meta 写入；前缀下全量校验；reset/deleteField/提交参与。4 篇纯字符串机器用例随设计吞并（D-P8） |
+| FormApi.spec.ts (148) | form_wbtest(14) / array_ops_wbtest(14) / array_meta_wbtest(9) / submit_wbtest(9) / subscribe_wbtest(20) / field_wbtest(8) / parity_small_wbtest(7)* / store_wbtest(9)** | 90 | 默认态/初始 state/update/reset（含字段级 default 优先、keepDefaultValues、空 reset 恢复新默认值）；值读写与 dirty；数组 7 操作（值 + meta 迁移，含嵌套数组、越界、vacated-slot 清理、array_version）；提交全流程（生命周期、校验拦截、preventDefault、异步提交、失败终态、canSubmit）；挂载/卸载/删除；订阅与批处理。*与 FieldApi 行共用（不重复计）**store 的前缀查询/重键作为 utils dot-path 机器的设计替代覆盖 |
+| FieldApi.spec.ts (106) | validation_wbtest(9) / validation_async_wbtest(9) / subscribe_wbtest(20，与 FormApi 行共用) / field_wbtest(8，共用) / parity_small_wbtest(7，共用) | 53* | onChange/onBlur/onSubmit/onMount 校验时机与槽位语义；异步 pending（is_validating）；防抖（窗口折叠、定时触发）；竞态中止（双向）；unmount 中止 in-flight；监听器 onChange/onBlur/onMount/onUnmount/onFieldUnmount（含重置表单的监听器、dont_run_listeners）；卸载保留值/交互标志/跨重挂载；未挂载字段 meta 可见性；跨字段联动（linkage_wbtest） |
+| FormGroupApi.spec.ts (31) | group_wbtest(29) | 29 | 组挂载/卸载（监听器、onMount 组校验，含 Mount 槽清理回归）；组级校验器（字符串 → 组错误、`{group, fields}` → 组错误 + 字段分发、未挂载字段延迟浮现、重叠校验器去重）；组内提交（不触碰表单提交态、meta 透传、修复后重校验）；isFieldsValid/isGroupValid/isValid/canSubmit 派生；form 级 onChange/onChangeGroup 监听器（独立防抖）；组 set_value 只触发 onChangeGroup；异步组校验 unmount 竞态中止；嵌套组分发 |
+| FieldGroupApi.spec.ts (20) | fieldgroup_equiv_wbtest(15) | 15 | 以 lens 组合等价译文覆盖：默认值继承/状态同步；相对字段寻址的校验/读值/读 meta；数组元素写入与数组操作经组合 lens；嵌套组合；重映射 lens（firstName→a）；组合键上的 meta 写入；前缀下全量校验；reset/deleteField/提交参与。4 篇纯字符串机器用例随设计吞并（D-P8） |
 | standardSchemaValidator.spec.ts (18) | parity_small_wbtest + validation_wbtest 跨字段用例 | 并入上表 | 改写为 Resolver 协议行为等价：schema 式校验器（整值判定→字段错误）经 Validator 协议进入字段 error 槽 |
 | DynamicValidation.spec.ts (9) | validation_async_wbtest + submit_wbtest | 并入上表 | 防抖/竞态中止虚拟时钟译文；RHF 式 validationLogic（onDynamic）属可插拔校验策略，moonform 以 Validator 协议 + 自定义闭包达到同等可插拔性（偏离标注 D-P3） |
-| fieldMeta.spec.ts (8) | parity_small_wbtest / field_wbtest | 8 | 未挂载无 meta；挂载默认 meta；嵌套路径；数组下标字段；卸载保留 |
-| formOptions.spec.ts (1) | parity_small_wbtest | 1 | 默认值流入表单状态 |
-| transform.spec.ts (1) | field_wbtest（等价断言） | 1 | 核心断言（错误先于挂载到达不丢失）已覆盖；mergeForm 机制豁免 |
+| fieldMeta.spec.ts (8) | parity_small_wbtest / field_wbtest | 并入上表 | 未挂载无 meta；挂载默认 meta；嵌套路径；数组下标字段；卸载保留 |
+| formOptions.spec.ts (1) | parity_small_wbtest | 并入上表 | 默认值流入表单状态 |
+| transform.spec.ts (1) | field_wbtest（等价断言） | 并入上表 | 核心断言（错误先于挂载到达不丢失）已覆盖；mergeForm 机制豁免 |
 
-**译文合计：185 个测试（`moon test` 全绿；js 259 / wasm 254 双目标执行通过，native check 通过）**
+**对账口径（可自证）**：译文测试合计 **157**，按文件唯一计数（共享文件只计一次）：
+form(14) + array_ops(14) + array_meta(9) + submit(9) + subscribe(20) + field(8) +
+parity_small(7) + validation(9) + validation_async(9) + group(29) +
+fieldgroup_equiv(15) + linkage(5) + store(9，MetaStore 前缀查询/重键机制作为
+utils dot-path 机器的设计替代覆盖)。每个文件的 `test "..."` 数可用
+`Select-String '^\s*test'` 直接复核。另有**非译文的自有测试 63**：基础设施
+（key 19 / lens 8 / equal 5）、回归守护（stale_index 5 / group_edges 4）、
+压力与边界（storm 5 / extreme 5 / scale 3）、core 文档测试（9）——
+`moon test -p core` 实测 220 = 157 + 63 吻合。全套执行计数见 README（随版本更新）。
 
 
 ## 豁免清单（含理由）

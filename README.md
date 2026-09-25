@@ -201,7 +201,7 @@ moon run src/examples/login --target js   # 示例验收
 三目标 `moon check` 零警告；CI 覆盖 check×3 目标 + test×3 目标 + 示例运行
 （[workflow](.github/workflows/ci.yml)）。
 
-上游对账：**185 个译文测试**覆盖 form-core@1.33.5 全部 342 个用例的行为语义
+上游对账：**157 个译文测试**覆盖 form-core@1.33.5 全部 342 个用例的行为语义
 （含 FormGroup 31 / FieldGroup 20）；豁免清单（utils dot-path 机器/
 mergeForm/类型层测试等）与有意偏离（值语义/虚拟时钟/lens 组合吞并
 FieldGroup 等 9 项）逐条记录于
