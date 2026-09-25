@@ -147,3 +147,6 @@ fn tokenize(src : String) -> Array[Token] raise ExprError {
   }
   toks
 }
+
+///|
+pub extend Token with Eq::{not_equal, equal}

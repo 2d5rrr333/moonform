@@ -17,6 +17,10 @@ pub(all) suberror CompileError {
   InvalidSchema(String, String)
   UnsupportedKeyword(String, String)
 } derive(Eq)
+pub fn CompileError::equal(Self, Self) -> Bool
+pub fn CompileError::not_equal(Self, Self) -> Bool
+pub fn CompileError::output(Self, &Logger) -> Unit
+pub fn CompileError::to_string(Self) -> String
 pub impl Show for CompileError
 
 // Types and methods
@@ -25,7 +29,9 @@ pub struct CompileOptions {
   assert_format : Bool
   locale : Locale
 } derive(Eq)
+pub fn CompileOptions::equal(Self, Self) -> Bool
 pub fn CompileOptions::new(strict? : Bool, assert_format? : Bool, locale? : Locale) -> Self
+pub fn CompileOptions::not_equal(Self, Self) -> Bool
 
 type Ctx
 
@@ -38,11 +44,15 @@ pub(all) enum JsonType {
   JTString
   JTInteger
 } derive(Eq)
+pub fn JsonType::equal(Self, Self) -> Bool
+pub fn JsonType::not_equal(Self, Self) -> Bool
 
 pub(all) enum Locale {
   EN
   ZH
 } derive(Eq)
+pub fn Locale::equal(Self, Self) -> Bool
+pub fn Locale::not_equal(Self, Self) -> Bool
 
 type Node
 
@@ -59,6 +69,9 @@ pub(all) struct ValidationError {
   schema_path : String
   message : String
 } derive(Eq, ToJson)
+pub fn ValidationError::equal(Self, Self) -> Bool
+pub fn ValidationError::not_equal(Self, Self) -> Bool
+pub fn ValidationError::to_json(Self) -> Json
 
 // Type aliases
 

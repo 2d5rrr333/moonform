@@ -330,3 +330,27 @@ test "meta migration: inner array ops only touch that array's subtree" {
     form.field_meta(board_l().key.push_idx(0).push_field("tags").push_idx(1)).is_touched,
   )
 }
+
+///|
+pub extend Board with Debug::{to_repr}
+
+///|
+pub extend Board with Eq::{not_equal, equal}
+
+///|
+pub extend Item with Debug::{to_repr}
+
+///|
+pub extend Item with Eq::{not_equal, equal}
+
+///|
+pub extend UserName with Debug::{to_repr}
+
+///|
+pub extend UserName with Eq::{not_equal, equal}
+
+///|
+pub extend UsersForm with Debug::{to_repr}
+
+///|
+pub extend UsersForm with Eq::{not_equal, equal}

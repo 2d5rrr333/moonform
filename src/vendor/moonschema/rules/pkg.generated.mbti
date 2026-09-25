@@ -16,6 +16,10 @@ pub fn rule_holds(Expr, Json) -> Bool
 pub(all) suberror ExprError {
   ExprSyntax(String)
 } derive(Eq)
+pub fn ExprError::equal(Self, Self) -> Bool
+pub fn ExprError::not_equal(Self, Self) -> Bool
+pub fn ExprError::output(Self, &Logger) -> Unit
+pub fn ExprError::to_string(Self) -> String
 pub impl Show for ExprError
 
 // Types and methods
@@ -30,13 +34,19 @@ pub(all) enum Expr {
   ECmp(String, Expr, Expr)
   ELogic(String, Expr, Expr)
 } derive(Eq)
+pub fn Expr::equal(Self, Self) -> Bool
+pub fn Expr::not_equal(Self, Self) -> Bool
 
 pub(all) enum PathSeg {
   PKey(String)
   PIndex(Int)
 } derive(Eq)
+pub fn PathSeg::equal(Self, Self) -> Bool
+pub fn PathSeg::not_equal(Self, Self) -> Bool
 
 type Token derive(Eq)
+pub fn Token::equal(Self, Self) -> Bool
+pub fn Token::not_equal(Self, Self) -> Bool
 
 // Type aliases
 

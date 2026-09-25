@@ -13,10 +13,10 @@ fn dummy() -> DummyForm {
 
 ///|
 test "required rejects empty and accepts non-empty" {
-  let r : @core.Validator[String, DummyForm] = required()
+  let r : @core.Validator[String, DummyForm] = @rules.required()
   assert_eq(@core.Validator::run(r, "", dummy()), ["Required"])
   assert_eq(@core.Validator::run(r, "x", dummy()), [])
-  let custom_msg : @core.Validator[String, DummyForm] = required(
+  let custom_msg : @core.Validator[String, DummyForm] = @rules.required(
     message="Name is required",
   )
   assert_eq(@core.Validator::run(custom_msg, "", dummy()), ["Name is required"])
@@ -24,14 +24,14 @@ test "required rejects empty and accepts non-empty" {
 
 ///|
 test "required_array enforces at least one element" {
-  let r : @core.Validator[Array[String], DummyForm] = required_array()
+  let r : @core.Validator[Array[String], DummyForm] = @rules.required_array()
   assert_eq(@core.Validator::run(r, [], dummy()), ["Required"])
   assert_eq(@core.Validator::run(r, ["a"], dummy()), [])
 }
 
 ///|
 test "min_length boundary is inclusive" {
-  let r : @core.Validator[String, DummyForm] = min_length(3)
+  let r : @core.Validator[String, DummyForm] = @rules.min_length(3)
   assert_eq(@core.Validator::run(r, "ab", dummy()), [
     "Must be at least 3 characters",
   ])
@@ -41,7 +41,7 @@ test "min_length boundary is inclusive" {
 
 ///|
 test "max_length boundary is inclusive" {
-  let r : @core.Validator[String, DummyForm] = max_length(3)
+  let r : @core.Validator[String, DummyForm] = @rules.max_length(3)
   assert_eq(@core.Validator::run(r, "abcd", dummy()), [
     "Must be at most 3 characters",
   ])
@@ -50,27 +50,27 @@ test "max_length boundary is inclusive" {
 
 ///|
 test "min_value / max_value boundaries are inclusive" {
-  let minr : @core.Validator[Double, DummyForm] = min_value(1.5)
+  let minr : @core.Validator[Double, DummyForm] = @rules.min_value(1.5)
   assert_eq(@core.Validator::run(minr, 1.4, dummy()), ["Must be at least 1.5"])
   assert_eq(@core.Validator::run(minr, 1.5, dummy()), [])
-  let maxr : @core.Validator[Double, DummyForm] = max_value(10.0)
+  let maxr : @core.Validator[Double, DummyForm] = @rules.max_value(10.0)
   assert_eq(@core.Validator::run(maxr, 10.1, dummy()), ["Must be at most 10"])
   assert_eq(@core.Validator::run(maxr, 10.0, dummy()), [])
 }
 
 ///|
 test "contains and starts_with pattern checks" {
-  let c : @core.Validator[String, DummyForm] = contains("@")
+  let c : @core.Validator[String, DummyForm] = @rules.contains("@")
   assert_eq(@core.Validator::run(c, "root@x.io", dummy()), [])
   assert_eq(@core.Validator::run(c, "root.x.io", dummy()), ["Invalid format"])
-  let p : @core.Validator[String, DummyForm] = starts_with("https://")
+  let p : @core.Validator[String, DummyForm] = @rules.starts_with("https://")
   assert_eq(@core.Validator::run(p, "https://x", dummy()), [])
   assert_eq(@core.Validator::run(p, "http://x", dummy()), ["Invalid format"])
 }
 
 ///|
 test "custom closure rule" {
-  let even : @core.Validator[Int, DummyForm] = custom(n => {
+  let even : @core.Validator[Int, DummyForm] = @rules.custom(n => {
     if n % 2 == 0 {
       []
     } else {
@@ -83,24 +83,24 @@ test "custom closure rule" {
 
 ///|
 test "min_int / max_int boundaries are inclusive" {
-  let minr : @core.Validator[Int, DummyForm] = min_int(3)
+  let minr : @core.Validator[Int, DummyForm] = @rules.min_int(3)
   assert_eq(@core.Validator::run(minr, 2, dummy()), ["Must be at least 3"])
   assert_eq(@core.Validator::run(minr, 3, dummy()), [])
-  let maxr : @core.Validator[Int, DummyForm] = max_int(10)
+  let maxr : @core.Validator[Int, DummyForm] = @rules.max_int(10)
   assert_eq(@core.Validator::run(maxr, 11, dummy()), ["Must be at most 10"])
   assert_eq(@core.Validator::run(maxr, 10, dummy()), [])
 }
 
 ///|
 test "equals accepts only the expected constant" {
-  let r : @core.Validator[String, DummyForm] = equals("yes")
+  let r : @core.Validator[String, DummyForm] = @rules.equals("yes")
   assert_eq(@core.Validator::run(r, "yes", dummy()), [])
   assert_eq(@core.Validator::run(r, "no", dummy()), ["Values do not match"])
 }
 
 ///|
 test "must_be_true enforces checked boxes" {
-  let r : @core.Validator[Bool, DummyForm] = must_be_true()
+  let r : @core.Validator[Bool, DummyForm] = @rules.must_be_true()
   assert_eq(@core.Validator::run(r, true, dummy()), [])
   assert_eq(@core.Validator::run(r, false, dummy()), [
     "This field must be checked",
@@ -109,7 +109,7 @@ test "must_be_true enforces checked boxes" {
 
 ///|
 test "non_blank rejects whitespace-only strings" {
-  let r : @core.Validator[String, DummyForm] = non_blank()
+  let r : @core.Validator[String, DummyForm] = @rules.non_blank()
   assert_eq(@core.Validator::run(r, "ok", dummy()), [])
   assert_eq(@core.Validator::run(r, "", dummy()), ["Must not be blank"])
   assert_eq(@core.Validator::run(r, "   ", dummy()), ["Must not be blank"])
@@ -118,7 +118,7 @@ test "non_blank rejects whitespace-only strings" {
 
 ///|
 test "numeric accepts integers with optional sign" {
-  let r : @core.Validator[String, DummyForm] = numeric()
+  let r : @core.Validator[String, DummyForm] = @rules.numeric()
   assert_eq(@core.Validator::run(r, "123", dummy()), [])
   assert_eq(@core.Validator::run(r, "-42", dummy()), [])
   assert_eq(@core.Validator::run(r, "12a", dummy()), ["Must be a number"])
@@ -128,7 +128,7 @@ test "numeric accepts integers with optional sign" {
 
 ///|
 test "email accepts common shapes, rejects broken ones" {
-  let r : @core.Validator[String, DummyForm] = email()
+  let r : @core.Validator[String, DummyForm] = @rules.email()
   assert_eq(@core.Validator::run(r, "user@example.com", dummy()), [])
   assert_eq(@core.Validator::run(r, "a.b@x.io", dummy()), [])
   assert_eq(@core.Validator::run(r, "no-at-sign", dummy()), [
@@ -154,7 +154,7 @@ test "email accepts common shapes, rejects broken ones" {
 
 ///|
 test "url accepts http(s) with dotted host or localhost" {
-  let r : @core.Validator[String, DummyForm] = url()
+  let r : @core.Validator[String, DummyForm] = @rules.url()
   assert_eq(@core.Validator::run(r, "https://example.com", dummy()), [])
   assert_eq(@core.Validator::run(r, "http://a.b/c?d=e", dummy()), [])
   assert_eq(@core.Validator::run(r, "http://localhost:8080", dummy()), [])
@@ -179,8 +179,8 @@ fn login_email_l() -> @core.Lens[Login, String] {
 test "rules chain and run through the core protocol" {
   // wire into a real form: required + min_length on a login email
   let form = @core.FormApi::make({ email: "", })
-  let required_rule : @core.Validator[String, Login] = required()
-  let min3_rule : @core.Validator[String, Login] = min_length(3)
+  let required_rule : @core.Validator[String, Login] = @rules.required()
+  let min3_rule : @core.Validator[String, Login] = @rules.min_length(3)
   let email = form.field(
     login_email_l(),
     on_change_validate=required_rule.then(min3_rule),

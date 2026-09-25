@@ -217,3 +217,9 @@ test "form api: writes keep the original defaults intact" {
   assert_eq(defaults.name, "test") // original struct untouched
   assert_eq(form.default_values().name, "test")
 }
+
+///|
+pub extend Person with Debug::{to_repr}
+
+///|
+pub extend Person with Eq::{not_equal, equal}

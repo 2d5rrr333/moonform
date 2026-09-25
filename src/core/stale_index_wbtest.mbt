@@ -86,3 +86,15 @@ struct DbgItem {
 struct DbgForm {
   friends : Array[DbgItem]
 } derive(Eq, Debug)
+
+///|
+pub extend DbgForm with Debug::{to_repr}
+
+///|
+pub extend DbgForm with Eq::{not_equal, equal}
+
+///|
+pub extend DbgItem with Debug::{to_repr}
+
+///|
+pub extend DbgItem with Eq::{not_equal, equal}

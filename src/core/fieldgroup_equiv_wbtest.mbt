@@ -529,3 +529,63 @@ test "fieldgroup: validating all fields under a prefix" {
   assert_false(field.meta().is_valid())
   assert_eq(field.meta().errors(), ["Error"])
 }
+
+///|
+pub extend FgAB with Debug::{to_repr}
+
+///|
+pub extend FgAB with Eq::{not_equal, equal}
+
+///|
+pub extend FgFormVals with Debug::{to_repr}
+
+///|
+pub extend FgFormVals with Eq::{not_equal, equal}
+
+///|
+pub extend FgHolder with Debug::{to_repr}
+
+///|
+pub extend FgHolder with Eq::{not_equal, equal}
+
+///|
+pub extend FgNames with Debug::{to_repr}
+
+///|
+pub extend FgNames with Eq::{not_equal, equal}
+
+///|
+pub extend FgNested with Debug::{to_repr}
+
+///|
+pub extend FgNested with Eq::{not_equal, equal}
+
+///|
+pub extend FgPerson with Debug::{to_repr}
+
+///|
+pub extend FgPerson with Eq::{not_equal, equal}
+
+///|
+pub extend FgRelatives with Debug::{to_repr}
+
+///|
+pub extend FgRelatives with Eq::{not_equal, equal}
+
+///|
+pub extend FgTop with Debug::{to_repr}
+
+///|
+pub extend FgTop with Eq::{not_equal, equal}
+
+///|
+pub extend FgValues with Debug::{to_repr}
+
+///|
+pub extend FgValues with Eq::{not_equal, equal}
+
+///|
+pub extend FgWrapper with Debug::{to_repr}
+
+///|
+pub extend FgWrapper with Eq::{not_equal, equal}

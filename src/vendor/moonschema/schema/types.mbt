@@ -347,3 +347,24 @@ fn str_code_points(s : String) -> Int {
   }
   n
 }
+
+///|
+pub extend CompileError with Eq::{not_equal, equal}
+
+///|
+pub extend CompileError with Show::{to_string, output}
+
+///|
+pub extend CompileOptions with Eq::{not_equal, equal}
+
+///|
+pub extend JsonType with Eq::{not_equal, equal}
+
+///|
+pub extend Locale with Eq::{not_equal, equal}
+
+///|
+pub extend ValidationError with Eq::{not_equal, equal}
+
+///|
+pub extend ValidationError with ToJson::{to_json}

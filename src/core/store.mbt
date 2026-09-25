@@ -211,3 +211,9 @@ pub fn MetaStore::remap_move(
 ) -> Unit {
   self.entries = key_remap_move(self.entries, prefix, from, to)
 }
+
+///|
+pub extend FieldMetaState with Debug::{to_repr}
+
+///|
+pub extend FieldMetaState with Eq::{not_equal, equal}

@@ -13,13 +13,19 @@ struct Profile {
 } derive(Eq, Debug)
 
 ///|
-fn nickname_l() -> Lens[Profile, String] {
-  field("nickname", p => p.nickname, (p, n) => { ..p, nickname: n, })
+pub extend Profile with Eq::{not_equal, equal}
+
+///|
+pub extend Profile with Debug::{to_repr}
+
+///|
+fn nickname_l() -> @core.Lens[Profile, String] {
+  @core.field("nickname", p => p.nickname, (p, n) => { ..p, nickname: n, })
 }
 
 ///|
-fn age_l() -> Lens[Profile, Int] {
-  field("age", p => p.age, (p, a) => { ..p, age: a, })
+fn age_l() -> @core.Lens[Profile, Int] {
+  @core.field("age", p => p.age, (p, a) => { ..p, age: a, })
 }
 
 ///|
@@ -46,17 +52,29 @@ struct Inner {
 } derive(Eq, Debug)
 
 ///|
+pub extend Inner with Eq::{not_equal, equal}
+
+///|
+pub extend Inner with Debug::{to_repr}
+
+///|
 struct Outer {
   inner : Inner
 } derive(Eq, Debug)
 
 ///|
+pub extend Outer with Eq::{not_equal, equal}
+
+///|
+pub extend Outer with Debug::{to_repr}
+
+///|
 test "doc: composed key derives from both segments" {
-  fn inner_l() -> Lens[Outer, Inner] {
-    field("inner", o => o.inner, (_o, i) => { inner: i, })
+  fn inner_l() -> @core.Lens[Outer, Inner] {
+    @core.field("inner", o => o.inner, (_o, i) => { inner: i, })
   }
-  fn city_l() -> Lens[Inner, String] {
-    field("city", i => i.city, (_i, c) => { city: c, })
+  fn city_l() -> @core.Lens[Inner, String] {
+    @core.field("city", i => i.city, (_i, c) => { city: c, })
   }
   let o : Outer = { inner: { city: "hz", }, }
   let composed = inner_l().compose(city_l())
@@ -75,13 +93,19 @@ struct Login {
 } derive(Eq, Debug)
 
 ///|
-fn login_email_l() -> Lens[Login, String] {
-  field("email", l => l.email, (l, e) => { ..l, email: e, })
+pub extend Login with Eq::{not_equal, equal}
+
+///|
+pub extend Login with Debug::{to_repr}
+
+///|
+fn login_email_l() -> @core.Lens[Login, String] {
+  @core.field("email", l => l.email, (l, e) => { ..l, email: e, })
 }
 
 ///|
 test "doc: form lifecycle" {
-  let form = FormApi::make({ email: "", password: "", })
+  let form = @core.FormApi::make({ email: "", password: "", })
   inspect(
     form.get_value(login_email_l()),
     content=(
@@ -110,16 +134,22 @@ struct Signup {
 } derive(Eq, Debug)
 
 ///|
-fn username_l() -> Lens[Signup, String] {
-  field("username", s => s.username, (_s, u) => { username: u, })
+pub extend Signup with Eq::{not_equal, equal}
+
+///|
+pub extend Signup with Debug::{to_repr}
+
+///|
+fn username_l() -> @core.Lens[Signup, String] {
+  @core.field("username", s => s.username, (_s, u) => { username: u, })
 }
 
 ///|
 test "doc: onChange validation fills the error slot" {
-  let form = FormApi::make({ username: "", })
+  let form = @core.FormApi::make({ username: "", })
   let username = form.field(
     username_l(),
-    on_change_validate=validator(v => {
+    on_change_validate=@core.validator(v => {
       if v.length() < 3 {
         ["min 3 chars"]
       } else {
@@ -146,33 +176,45 @@ struct Friend {
 } derive(Eq, Debug)
 
 ///|
+pub extend Friend with Eq::{not_equal, equal}
+
+///|
+pub extend Friend with Debug::{to_repr}
+
+///|
 struct Roster {
   friends : Array[Friend]
 } derive(Eq, Debug)
 
 ///|
-fn friends_l() -> Lens[Roster, Array[Friend]] {
-  field("friends", r => r.friends, (_r, xs) => { friends: xs, })
+pub extend Roster with Eq::{not_equal, equal}
+
+///|
+pub extend Roster with Debug::{to_repr}
+
+///|
+fn friends_l() -> @core.Lens[Roster, Array[Friend]] {
+  @core.field("friends", r => r.friends, (_r, xs) => { friends: xs, })
 }
 
 ///|
-fn friend_name_l() -> Lens[Friend, String] {
-  field("name", f => f.name, (_f, n) => { name: n, })
+fn friend_name_l() -> @core.Lens[Friend, String] {
+  @core.field("name", f => f.name, (_f, n) => { name: n, })
 }
 
 ///|
 test "doc: remove migrates meta to shifted slots" {
-  let form = FormApi::make({
+  let form = @core.FormApi::make({
     friends: [{ name: "alice", }, { name: "bob", }, { name: "carol", }],
   })
   // mount a field for friends[1].name so the accessor is used
-  let bob_name = form.field(at(friends_l(), 1).compose(friend_name_l()))
+  let bob_name = form.field(@core.at(friends_l(), 1).compose(friend_name_l()))
   bob_name.mount()
   // an error sits on friends[1].name
   form
   .meta_store()
   .update(friends_l().key.push_idx(1).push_field("name"), m => {
-    m.with_cause_errors(ValidationCause::change(), Some(["taken"]))
+    m.with_cause_errors(@core.ValidationCause::change(), Some(["taken"]))
   })
   form.remove_value(friends_l(), 0)
   // the error followed the element: now at friends[0].name
@@ -192,18 +234,24 @@ struct AsyncForm {
 } derive(Eq, Debug)
 
 ///|
-fn token_l() -> Lens[AsyncForm, String] {
-  field("token", f => f.token, (_f, t) => { token: t, })
+pub extend AsyncForm with Eq::{not_equal, equal}
+
+///|
+pub extend AsyncForm with Debug::{to_repr}
+
+///|
+fn token_l() -> @core.Lens[AsyncForm, String] {
+  @core.field("token", f => f.token, (_f, t) => { token: t, })
 }
 
 ///|
 test "doc: debounced async validation on the virtual clock" {
-  let vc = VirtualClock::make()
-  let form = FormApi::make({ token: "", }).with_clock(vc.clock())
+  let vc = @core.VirtualClock::make()
+  let form = @core.FormApi::make({ token: "", }).with_clock(vc.clock())
   let token = form.field(
     token_l(),
     on_change_async_debounce_ms=500,
-    on_change_async_validate=async_validator((value, clock, done) => {
+    on_change_async_validate=@core.async_validator((value, clock, done) => {
       let _ = clock.schedule(100, () => {
         if value == "taken" {
           done(["token already taken"])
@@ -233,32 +281,47 @@ struct Wiz {
 } derive(Eq, Debug)
 
 ///|
+pub extend Wiz with Eq::{not_equal, equal}
+
+///|
+pub extend Wiz with Debug::{to_repr}
+
+///|
 struct WizStep {
   title : String
 } derive(Eq, Debug)
 
 ///|
-fn wiz_step1_l() -> Lens[Wiz, WizStep] {
-  field("step1", w => w.step1, (w, s) => { ..w, step1: s, })
+pub extend WizStep with Eq::{not_equal, equal}
+
+///|
+pub extend WizStep with Debug::{to_repr}
+
+///|
+fn wiz_step1_l() -> @core.Lens[Wiz, WizStep] {
+  @core.field("step1", w => w.step1, (w, s) => { ..w, step1: s, })
 }
 
 ///|
-fn wiz_title_l() -> Lens[WizStep, String] {
-  field("title", s => s.title, (_s, t) => { title: t, })
+fn wiz_title_l() -> @core.Lens[WizStep, String] {
+  @core.field("title", s => s.title, (_s, t) => { title: t, })
 }
 
 ///|
 test "doc: group validator distributes field errors; group submit is form-safe" {
-  let form = FormApi::make({ step1: { title: "", }, step2: { title: "ok", }, })
+  let form = @core.FormApi::make({
+    step1: { title: "", },
+    step2: { title: "ok", },
+  })
   let step1 = form.group(
     wiz_step1_l(),
-    on_submit_validate=group_validator_value(g => {
+    on_submit_validate=@core.group_validator_value(g => {
       if g.title == "" {
-        GroupValidationResult::group_and_fields("Step incomplete", [
-          (Key::field("title"), "Title is required"),
+        @core.GroupValidationResult::group_and_fields("Step incomplete", [
+          (@core.Key::field("title"), "Title is required"),
         ])
       } else {
-        GroupValidationResult::valid()
+        @core.GroupValidationResult::valid()
       }
     }),
   )
@@ -296,21 +359,27 @@ struct Order {
 } derive(Eq, Debug)
 
 ///|
+pub extend Order with Eq::{not_equal, equal}
+
+///|
+pub extend Order with Debug::{to_repr}
+
+///|
 struct SubmitCounter {
   mut n : Int
 }
 
 ///|
-fn qty_l() -> Lens[Order, Int] {
-  field("qty", o => o.qty, (_o, q) => { qty: q, })
+fn qty_l() -> @core.Lens[Order, Int] {
+  @core.field("qty", o => o.qty, (_o, q) => { qty: q, })
 }
 
 ///|
 test "doc: submit gates on validation" {
-  let form = FormApi::make({ qty: 0, })
+  let form = @core.FormApi::make({ qty: 0, })
   let qty = form.field(
     qty_l(),
-    on_submit_validate=validator(v => {
+    on_submit_validate=@core.validator(v => {
       if v < 1 {
         ["qty must be >= 1"]
       } else {
@@ -321,11 +390,11 @@ test "doc: submit gates on validation" {
   qty.mount()
   let submitted : SubmitCounter = { n: 0, }
   form.handle_submit(submit_options={
-    ..SubmitOptions::make(),
+    ..@core.SubmitOptions::make(),
     on_submit: Some(
-      submit_handler((_v, done) => {
+      @core.submit_handler((_v, done) => {
         submitted.n = submitted.n + 1
-        done(SubmitResult::ok())
+        done(@core.SubmitResult::ok())
       }),
     ),
   })

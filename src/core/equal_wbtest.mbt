@@ -94,3 +94,21 @@ test "writes never mutate the original value" {
   assert_eq(current.profile.addr.city, "sh")
   assert_eq(d.profile.hobbies, current.profile.hobbies)
 }
+
+///|
+pub extend Account with Debug::{to_repr}
+
+///|
+pub extend Account with Eq::{not_equal, equal}
+
+///|
+pub extend Addr with Debug::{to_repr}
+
+///|
+pub extend Addr with Eq::{not_equal, equal}
+
+///|
+pub extend Profile with Debug::{to_repr}
+
+///|
+pub extend Profile with Eq::{not_equal, equal}

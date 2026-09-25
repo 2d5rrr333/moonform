@@ -673,3 +673,15 @@ pub fn[V, G] FormGroupApi::handle_submit(
     None => ()
   }
 }
+
+///|
+pub extend GroupFieldError with Debug::{to_repr}
+
+///|
+pub extend GroupFieldError with Eq::{not_equal, equal}
+
+///|
+pub extend GroupValidationResult with Debug::{to_repr}
+
+///|
+pub extend GroupValidationResult with Eq::{not_equal, equal}

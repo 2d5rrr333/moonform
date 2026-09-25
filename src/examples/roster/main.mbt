@@ -123,3 +123,15 @@ fn main raise {
 
   println("roster example: all checks passed")
 }
+
+///|
+pub extend Friend with Debug::{to_repr}
+
+///|
+pub extend Friend with Eq::{not_equal, equal}
+
+///|
+pub extend RosterForm with Debug::{to_repr}
+
+///|
+pub extend RosterForm with Eq::{not_equal, equal}

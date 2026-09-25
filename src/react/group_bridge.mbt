@@ -167,3 +167,6 @@ pub fn[V, G] GroupBridge::submit(
       self.group.handle_submit(on_group_submit=f, on_group_submit_invalid=g)
   }
 }
+
+///|
+pub extend GroupState with Debug::{to_repr}

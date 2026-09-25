@@ -118,3 +118,15 @@ pub fn ErrorMap::flatten(self : ErrorMap) -> Array[String] {
 pub fn ErrorMap::has_errors(self : ErrorMap) -> Bool {
   self.flatten().length() > 0
 }
+
+///|
+pub extend ErrorMap with Debug::{to_repr}
+
+///|
+pub extend ErrorMap with Eq::{not_equal, equal}
+
+///|
+pub extend ValidationCause with Debug::{to_repr}
+
+///|
+pub extend ValidationCause with Eq::{not_equal, equal}

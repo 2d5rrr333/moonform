@@ -237,3 +237,27 @@ fn move_idx(idx : Int, from : Int, to : Int) -> Int {
     idx
   }
 }
+
+///|
+pub extend Key with Compare::{op_lt, op_le, op_ge, compare, op_gt}
+
+///|
+pub extend Key with Debug::{to_repr}
+
+///|
+pub extend Key with Eq::{not_equal, equal}
+
+///|
+pub extend Key with Hash::{hash, hash_combine}
+
+///|
+pub extend Seg with Compare::{op_lt, op_le, op_ge, compare, op_gt}
+
+///|
+pub extend Seg with Debug::{to_repr}
+
+///|
+pub extend Seg with Eq::{not_equal, equal}
+
+///|
+pub extend Seg with Hash::{hash, hash_combine}

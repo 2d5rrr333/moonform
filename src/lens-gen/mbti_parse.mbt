@@ -175,3 +175,15 @@ fn strip_suffix(s : String, suffix : String) -> String {
     s
   }
 }
+
+///|
+pub extend MbtiField with Debug::{to_repr}
+
+///|
+pub extend MbtiField with Eq::{not_equal, equal}
+
+///|
+pub extend MbtiStruct with Debug::{to_repr}
+
+///|
+pub extend MbtiStruct with Eq::{not_equal, equal}

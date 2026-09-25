@@ -726,3 +726,27 @@ test "group: is_valid recovers after fixing field and group errors" {
   assert_true(step1.is_group_valid())
   assert_true(step1.is_valid())
 }
+
+///|
+pub extend Step with Debug::{to_repr}
+
+///|
+pub extend Step with Eq::{not_equal, equal}
+
+///|
+pub extend StepU with Debug::{to_repr}
+
+///|
+pub extend StepU with Eq::{not_equal, equal}
+
+///|
+pub extend Wizard with Debug::{to_repr}
+
+///|
+pub extend Wizard with Eq::{not_equal, equal}
+
+///|
+pub extend WizardU with Debug::{to_repr}
+
+///|
+pub extend WizardU with Eq::{not_equal, equal}

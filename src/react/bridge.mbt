@@ -152,3 +152,6 @@ pub fn[V, A] FieldBridge::set_value(
 pub fn[V, A] FieldBridge::blur(self : FieldBridge[V, A]) -> Unit {
   self.form.blur_field(self.lens.key)
 }
+
+///|
+pub extend FieldState with Debug::{to_repr}

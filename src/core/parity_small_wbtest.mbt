@@ -160,3 +160,27 @@ test "resolver parity: schema-style validator feeds field errors" {
   username.set_value("secret")
   assert_eq(username.meta().errors(), [])
 }
+
+///|
+pub extend Creds with Debug::{to_repr}
+
+///|
+pub extend Creds with Eq::{not_equal, equal}
+
+///|
+pub extend Deep with Debug::{to_repr}
+
+///|
+pub extend Deep with Eq::{not_equal, equal}
+
+///|
+pub extend Names with Debug::{to_repr}
+
+///|
+pub extend Names with Eq::{not_equal, equal}
+
+///|
+pub extend NestedUser with Debug::{to_repr}
+
+///|
+pub extend NestedUser with Eq::{not_equal, equal}

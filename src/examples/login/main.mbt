@@ -97,3 +97,12 @@ fn main raise {
   assert_true(form.is_submit_successful())
   println("login example: all checks passed")
 }
+
+///|
+pub extend LoginValues with Debug::{to_repr}
+
+///|
+pub extend LoginValues with Eq::{not_equal, equal}
+
+///|
+pub extend LoginValues with ToJson::{to_json}

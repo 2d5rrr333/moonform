@@ -175,3 +175,9 @@ test "array ops: operations are value-semantic on the original defaults" {
   form.remove_value(names_l(), 0)
   assert_eq(d, { names: ["test"], }) // original untouched
 }
+
+///|
+pub extend Arr with Debug::{to_repr}
+
+///|
+pub extend Arr with Eq::{not_equal, equal}

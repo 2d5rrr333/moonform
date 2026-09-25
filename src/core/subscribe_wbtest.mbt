@@ -310,3 +310,15 @@ test "subscription: unsubscribe stops prefix notifications" {
   form.set_value(sub_user_first_l(), "b")
   assert_eq(hits.n, 1) // no further notifications
 }
+
+///|
+pub extend SubNested with Debug::{to_repr}
+
+///|
+pub extend SubNested with Eq::{not_equal, equal}
+
+///|
+pub extend SubOuter with Debug::{to_repr}
+
+///|
+pub extend SubOuter with Eq::{not_equal, equal}

@@ -41,6 +41,9 @@ pub enum AsyncCause {
   ChangeAsync
   BlurAsync
 } derive(Eq, @debug.Debug)
+pub fn AsyncCause::equal(Self, Self) -> Bool
+pub fn AsyncCause::not_equal(Self, Self) -> Bool
+pub fn AsyncCause::to_repr(Self) -> @debug.Repr
 
 pub struct AsyncGroupValidator[G, V] {
   validate : (G, V, Clock, (GroupValidationResult) -> Unit) -> Unit
@@ -54,6 +57,9 @@ pub enum ChangeKind {
   Value
   Meta
 } derive(Eq, @debug.Debug)
+pub fn ChangeKind::equal(Self, Self) -> Bool
+pub fn ChangeKind::not_equal(Self, Self) -> Bool
+pub fn ChangeKind::to_repr(Self) -> @debug.Repr
 pub fn ChangeKind::value_and_meta() -> Array[Self]
 
 pub struct ChangeListener {
@@ -79,10 +85,13 @@ pub struct ErrorMap {
   on_server : Array[String]?
 } derive(Eq, @debug.Debug)
 pub fn ErrorMap::empty() -> Self
+pub fn ErrorMap::equal(Self, Self) -> Bool
 pub fn ErrorMap::flatten(Self) -> Array[String]
 pub fn ErrorMap::get(Self, ValidationCause) -> Array[String]?
 pub fn ErrorMap::has_errors(Self) -> Bool
+pub fn ErrorMap::not_equal(Self, Self) -> Bool
 pub fn ErrorMap::set(Self, ValidationCause, Array[String]?) -> Self
+pub fn ErrorMap::to_repr(Self) -> @debug.Repr
 
 pub struct FieldApi[V, A] {
   form : FormApi[V]
@@ -125,9 +134,12 @@ pub struct FieldMetaState {
   array_version : Int
 } derive(Eq, @debug.Debug)
 pub fn FieldMetaState::default_meta() -> Self
+pub fn FieldMetaState::equal(Self, Self) -> Bool
 pub fn FieldMetaState::errors(Self) -> Array[String]
 pub fn FieldMetaState::has_errors(Self) -> Bool
 pub fn FieldMetaState::is_valid(Self) -> Bool
+pub fn FieldMetaState::not_equal(Self, Self) -> Bool
+pub fn FieldMetaState::to_repr(Self) -> @debug.Repr
 pub fn FieldMetaState::with_cause_errors(Self, ValidationCause, Array[String]?) -> Self
 
 pub(all) struct FieldReg[V] {
@@ -252,6 +264,9 @@ pub struct GroupFieldError {
   key : Key
   errors : Array[String]
 } derive(Eq, @debug.Debug)
+pub fn GroupFieldError::equal(Self, Self) -> Bool
+pub fn GroupFieldError::not_equal(Self, Self) -> Bool
+pub fn GroupFieldError::to_repr(Self) -> @debug.Repr
 
 pub(all) struct GroupReg[V] {
   token : Int
@@ -263,9 +278,12 @@ pub struct GroupValidationResult {
   group_errors : Array[String]
   field_errors : Array[GroupFieldError]
 } derive(Eq, @debug.Debug)
+pub fn GroupValidationResult::equal(Self, Self) -> Bool
 pub fn GroupValidationResult::fields(Array[(Key, String)]) -> Self
 pub fn GroupValidationResult::group_and_fields(String, Array[(Key, String)]) -> Self
 pub fn GroupValidationResult::group_error(String) -> Self
+pub fn GroupValidationResult::not_equal(Self, Self) -> Bool
+pub fn GroupValidationResult::to_repr(Self) -> @debug.Repr
 pub fn GroupValidationResult::valid() -> Self
 
 pub struct GroupValidationSpec[G, V] {
@@ -284,17 +302,27 @@ pub struct GroupValidator[G, V] {
 pub struct Key {
   segs : Array[Seg]
 } derive(Compare, Eq, Hash, @debug.Debug)
+pub fn Key::compare(Self, Self) -> Int
 pub fn Key::concat(Self, Self) -> Self
+pub fn Key::equal(Self, Self) -> Bool
 pub fn Key::field(String) -> Self
 pub fn Key::from_segs(Array[Seg]) -> Self
 pub fn Key::has_prefix(Self, Self) -> Bool
+pub fn Key::hash(Self) -> Int
+pub fn Key::hash_combine(Self, Hasher) -> Unit
 pub fn Key::idx(Int) -> Self
 pub fn Key::length(Self) -> Int
+pub fn Key::not_equal(Self, Self) -> Bool
+pub fn Key::op_ge(Self, Self) -> Bool
+pub fn Key::op_gt(Self, Self) -> Bool
+pub fn Key::op_le(Self, Self) -> Bool
+pub fn Key::op_lt(Self, Self) -> Bool
 pub fn Key::push_field(Self, String) -> Self
 pub fn Key::push_idx(Self, Int) -> Self
 pub fn Key::render(Self) -> String
 pub fn Key::root() -> Self
 pub fn Key::strip_prefix(Self, Self) -> Self?
+pub fn Key::to_repr(Self) -> @debug.Repr
 
 pub struct Lens[S, A] {
   key : Key
@@ -332,6 +360,16 @@ pub enum Seg {
   Field(String)
   Idx(Int)
 } derive(Compare, Eq, Hash, @debug.Debug)
+pub fn Seg::compare(Self, Self) -> Int
+pub fn Seg::equal(Self, Self) -> Bool
+pub fn Seg::hash(Self) -> Int
+pub fn Seg::hash_combine(Self, Hasher) -> Unit
+pub fn Seg::not_equal(Self, Self) -> Bool
+pub fn Seg::op_ge(Self, Self) -> Bool
+pub fn Seg::op_gt(Self, Self) -> Bool
+pub fn Seg::op_le(Self, Self) -> Bool
+pub fn Seg::op_lt(Self, Self) -> Bool
+pub fn Seg::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Sub {
   id : Int
@@ -386,9 +424,12 @@ pub enum ValidationCause {
 } derive(Eq, @debug.Debug)
 pub fn ValidationCause::blur() -> Self
 pub fn ValidationCause::change() -> Self
+pub fn ValidationCause::equal(Self, Self) -> Bool
 pub fn ValidationCause::mount() -> Self
+pub fn ValidationCause::not_equal(Self, Self) -> Bool
 pub fn ValidationCause::server() -> Self
 pub fn ValidationCause::submit() -> Self
+pub fn ValidationCause::to_repr(Self) -> @debug.Repr
 
 pub struct ValidationSpec[A, V] {
   on_mount : Validator[A, V]?

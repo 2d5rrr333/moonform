@@ -183,3 +183,9 @@ pub fn Subscriptions::batch(self : Subscriptions, f : () -> Unit) -> Unit {
     }
   }
 }
+
+///|
+pub extend ChangeKind with Debug::{to_repr}
+
+///|
+pub extend ChangeKind with Eq::{not_equal, equal}

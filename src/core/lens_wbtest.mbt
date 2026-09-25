@@ -140,3 +140,21 @@ test "at lens bounds" {
   let f2 = oob.set(f, { name: "x", nick: "x", tags: [], })
   assert_eq(f2, f)
 }
+
+///|
+pub extend Friend with Debug::{to_repr}
+
+///|
+pub extend Friend with Eq::{not_equal, equal}
+
+///|
+pub extend LoginForm with Debug::{to_repr}
+
+///|
+pub extend LoginForm with Eq::{not_equal, equal}
+
+///|
+pub extend User with Debug::{to_repr}
+
+///|
+pub extend User with Eq::{not_equal, equal}

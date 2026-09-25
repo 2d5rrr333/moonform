@@ -185,3 +185,21 @@ fn main raise {
 fn Tally::make() -> Tally {
   { n: 0, }
 }
+
+///|
+pub extend Account with Debug::{to_repr}
+
+///|
+pub extend Account with Eq::{not_equal, equal}
+
+///|
+pub extend Profile with Debug::{to_repr}
+
+///|
+pub extend Profile with Eq::{not_equal, equal}
+
+///|
+pub extend WizardValues with Debug::{to_repr}
+
+///|
+pub extend WizardValues with Eq::{not_equal, equal}

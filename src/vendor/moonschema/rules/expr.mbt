@@ -73,3 +73,15 @@ fn Value::truthy(self : Value) -> Bool {
 pub fn parse_instance(text : String) -> Json raise @json.ParseError {
   @json.parse(text)
 }
+
+///|
+pub extend Expr with Eq::{not_equal, equal}
+
+///|
+pub extend ExprError with Eq::{not_equal, equal}
+
+///|
+pub extend ExprError with Show::{to_string, output}
+
+///|
+pub extend PathSeg with Eq::{not_equal, equal}

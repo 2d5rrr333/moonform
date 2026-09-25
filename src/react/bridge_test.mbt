@@ -1,4 +1,4 @@
-// FieldBridge semantics (headless): snapshot identity stability, change
+// @react.FieldBridge semantics (headless): snapshot identity stability, change
 // refresh, attach/detach lifecycle. (Full React render cycles run in the
 // examples app; these tests pin the bridge contract the hook relies on.)
 
@@ -15,7 +15,7 @@ fn simple_name_l() -> @core.Lens[Simple, String] {
 ///|
 test "bridge: snapshot is identity-stable until a change" {
   let form = @core.FormApi::make({ name: "a", })
-  let bridge = FieldBridge::make(form, simple_name_l())
+  let bridge = @react.FieldBridge::make(form, simple_name_l())
   let s1 = bridge.state()
   let s2 = bridge.state()
   assert_eq(s1.rev, s2.rev) // same snapshot until refresh
@@ -27,7 +27,7 @@ test "bridge: snapshot is identity-stable until a change" {
 ///|
 test "bridge: set_value refreshes the snapshot via subscription" {
   let form = @core.FormApi::make({ name: "a", })
-  let bridge = FieldBridge::make(form, simple_name_l())
+  let bridge = @react.FieldBridge::make(form, simple_name_l())
   bridge.attach()
   bridge.set_value("b")
   let s = bridge.state()
@@ -40,7 +40,7 @@ test "bridge: set_value refreshes the snapshot via subscription" {
 ///|
 test "bridge: detach stops refreshes" {
   let form = @core.FormApi::make({ name: "a", })
-  let bridge = FieldBridge::make(form, simple_name_l())
+  let bridge = @react.FieldBridge::make(form, simple_name_l())
   bridge.attach()
   bridge.set_value("b")
   let rev_after_b = bridge.state().rev
@@ -57,7 +57,7 @@ test "bridge: detach stops refreshes" {
 ///|
 test "bridge: blur reflects in the snapshot" {
   let form = @core.FormApi::make({ name: "a", })
-  let bridge = FieldBridge::make(form, simple_name_l())
+  let bridge = @react.FieldBridge::make(form, simple_name_l())
   bridge.attach()
   bridge.blur()
   let s = bridge.state()
@@ -79,10 +79,16 @@ test "bridge: errors surface through the snapshot" {
     }),
   )
   field.mount()
-  let bridge = FieldBridge::make(form, simple_name_l())
+  let bridge = @react.FieldBridge::make(form, simple_name_l())
   bridge.attach()
   field.set_value("bad")
   let s = bridge.state()
   assert_eq(s.errors, ["no bad values"])
   assert_false(s.is_valid)
 }
+
+///|
+pub extend Simple with Debug::{to_repr}
+
+///|
+pub extend Simple with Eq::{not_equal, equal}

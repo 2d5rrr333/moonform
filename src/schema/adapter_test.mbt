@@ -38,11 +38,19 @@ test "schema adapter: per-field errors via JSON-Pointer paths" {
   let form = @core.FormApi::make({ email: "not-an-email", password: "short", })
   let email = form.field(
     login_email_l(),
-    on_change_validate=schema_field_validator(s, "email", login_email_l()),
+    on_change_validate=@schema.schema_field_validator(
+      s,
+      "email",
+      login_email_l(),
+    ),
   )
   let password = form.field(
     login_password_l(),
-    on_change_validate=schema_field_validator(s, "password", login_password_l()),
+    on_change_validate=@schema.schema_field_validator(
+      s,
+      "password",
+      login_password_l(),
+    ),
   )
   email.mount()
   password.mount()
@@ -63,11 +71,19 @@ test "schema adapter: valid values produce no errors" {
   })
   let email = form.field(
     login_email_l(),
-    on_change_validate=schema_field_validator(s, "email", login_email_l()),
+    on_change_validate=@schema.schema_field_validator(
+      s,
+      "email",
+      login_email_l(),
+    ),
   )
   let password = form.field(
     login_password_l(),
-    on_change_validate=schema_field_validator(s, "password", login_password_l()),
+    on_change_validate=@schema.schema_field_validator(
+      s,
+      "password",
+      login_password_l(),
+    ),
   )
   email.mount()
   password.mount()
@@ -80,7 +96,7 @@ test "schema adapter: valid values produce no errors" {
 ///|
 test "schema adapter: empty email reaches the email slot" {
   let s = ok_schema()
-  let v : @core.Validator[String, Login] = schema_field_validator(
+  let v : @core.Validator[String, Login] = @schema.schema_field_validator(
     s,
     "email",
     login_email_l(),
@@ -99,7 +115,11 @@ test "schema adapter: parity with rules-based validation" {
   let form = @core.FormApi::make({ email: "", password: "", })
   let email = form.field(
     login_email_l(),
-    on_change_validate=schema_field_validator(s, "email", login_email_l()),
+    on_change_validate=@schema.schema_field_validator(
+      s,
+      "email",
+      login_email_l(),
+    ),
   )
   email.mount()
   email.set_value("plainaddress")
@@ -112,3 +132,12 @@ test "schema adapter: parity with rules-based validation" {
   })
   assert_true(rules_errs.length() > 0)
 }
+
+///|
+pub extend Login with Debug::{to_repr}
+
+///|
+pub extend Login with Eq::{not_equal, equal}
+
+///|
+pub extend Login with ToJson::{to_json}

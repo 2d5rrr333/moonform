@@ -182,3 +182,9 @@ fn main {
     @react.component(login_component, { on_logged_in: _ => (), }, []).to_js_obscure(),
   )
 }
+
+///|
+pub extend LoginValues with Debug::{to_repr}
+
+///|
+pub extend LoginValues with Eq::{not_equal, equal}

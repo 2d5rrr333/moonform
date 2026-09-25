@@ -29,3 +29,9 @@ pub enum AsyncCause {
   ChangeAsync
   BlurAsync
 } derive(Eq, Debug)
+
+///|
+pub extend AsyncCause with Debug::{to_repr}
+
+///|
+pub extend AsyncCause with Eq::{not_equal, equal}

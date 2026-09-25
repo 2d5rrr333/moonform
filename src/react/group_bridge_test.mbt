@@ -1,4 +1,4 @@
-// GroupBridge semantics (headless): snapshot identity stability, prefix
+// @react.GroupBridge semantics (headless): snapshot identity stability, prefix
 // subscription coverage (child-field changes refresh the group snapshot),
 // submit wiring, attach/detach lifecycle. (Full React render cycles run in
 // the examples app; these tests pin the bridge contract the hook relies on.)
@@ -62,7 +62,7 @@ test "group bridge: snapshot is identity-stable until a change" {
   let form = @core.FormApi::make({ account: { username: "", }, other: "", })
   let group = form.group(gs_account_l())
   group.mount()
-  let bridge = GroupBridge::make(group)
+  let bridge = @react.GroupBridge::make(group)
   let s1 = bridge.state()
   let s2 = bridge.state()
   assert_eq(s1.rev, s2.rev) // same snapshot until refresh
@@ -76,7 +76,7 @@ test "group bridge: child-field change refreshes the snapshot" {
   let form = @core.FormApi::make({ account: { username: "", }, other: "", })
   let group = form.group(gs_account_l())
   group.mount()
-  let bridge = GroupBridge::make(group)
+  let bridge = @react.GroupBridge::make(group)
   bridge.attach()
   let username = form.field(gs_username_l())
   username.mount()
@@ -92,7 +92,7 @@ test "group bridge: changes outside the group do not refresh" {
   let form = @core.FormApi::make({ account: { username: "", }, other: "", })
   let group = form.group(gs_account_l())
   group.mount()
-  let bridge = GroupBridge::make(group)
+  let bridge = @react.GroupBridge::make(group)
   bridge.attach()
   form.set_value(gs_other_l(), "x")
   let s = bridge.state()
@@ -108,7 +108,7 @@ test "group bridge: distributed errors surface in the snapshot" {
     on_submit_validate=gs_required_username(),
   )
   group.mount()
-  let bridge = GroupBridge::make(group)
+  let bridge = @react.GroupBridge::make(group)
   bridge.attach()
   let submitted = { n: 0, }
   bridge.submit(on_group_submit=(_v, _meta) => submitted.n = submitted.n + 1, on_group_submit_invalid=() => {
@@ -137,7 +137,7 @@ test "group bridge: detach stops refreshes" {
   let form = @core.FormApi::make({ account: { username: "", }, other: "", })
   let group = form.group(gs_account_l())
   group.mount()
-  let bridge = GroupBridge::make(group)
+  let bridge = @react.GroupBridge::make(group)
   bridge.attach()
   form.set_value(gs_username_l(), "a")
   let rev_after_a = bridge.state().rev
@@ -157,9 +157,21 @@ test "group bridge: group submit never touches the form submit state" {
     on_submit_validate=gs_required_username(),
   )
   group.mount()
-  let bridge = GroupBridge::make(group)
+  let bridge = @react.GroupBridge::make(group)
   bridge.attach()
   bridge.submit(on_group_submit=(_v, _meta) => ())
   assert_eq(form.submission_attempts(), 0) // the form never submitted
   assert_false(form.is_submitted())
 }
+
+///|
+pub extend GroupAccount with Debug::{to_repr}
+
+///|
+pub extend GroupAccount with Eq::{not_equal, equal}
+
+///|
+pub extend GroupSimple with Debug::{to_repr}
+
+///|
+pub extend GroupSimple with Eq::{not_equal, equal}

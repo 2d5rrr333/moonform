@@ -27,12 +27,18 @@ pub struct MbtiField {
   name : String
   type_ref : String
 } derive(Eq, @debug.Debug)
+pub fn MbtiField::equal(Self, Self) -> Bool
+pub fn MbtiField::not_equal(Self, Self) -> Bool
+pub fn MbtiField::to_repr(Self) -> @debug.Repr
 
 pub struct MbtiStruct {
   name : String
   type_params : Array[String]
   fields : Array[MbtiField]
 } derive(Eq, @debug.Debug)
+pub fn MbtiStruct::equal(Self, Self) -> Bool
+pub fn MbtiStruct::not_equal(Self, Self) -> Bool
+pub fn MbtiStruct::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 
