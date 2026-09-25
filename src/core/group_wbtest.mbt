@@ -195,6 +195,34 @@ test "group: onMount group validator errors surface at mount" {
   assert_false(step1.can_submit())
 }
 
+// group Mount-slot semantics mirror field-level set_value: a change inside
+// the group (child write or whole-group write) supersedes the onMount
+// judgment — otherwise a stale onMount group error could never clear
+
+///|
+test "group: onMount group error clears on child change" {
+  let form = FormApi::make(wizard_defaults_empty())
+  let step1 = form.group(step1_l(), on_mount_validate=step_name_required())
+  let name_field = form.field(step1_name_l())
+  step1.mount()
+  name_field.mount()
+  assert_false(step1.is_group_valid()) // onMount error present
+  name_field.set_value("fixed")
+  assert_eq(step1.error_for_cause(Mount), None) // superseded by the change
+  assert_true(step1.is_group_valid())
+}
+
+///|
+test "group: onMount group error clears on group set_value" {
+  let form = FormApi::make(wizard_defaults_empty())
+  let step1 = form.group(step1_l(), on_mount_validate=step_name_required())
+  step1.mount()
+  assert_false(step1.is_group_valid())
+  step1.set_value({ name: "fixed", })
+  assert_eq(step1.error_for_cause(Mount), None)
+  assert_true(step1.is_group_valid())
+}
+
 // upstream: "should run listener onMount"
 
 ///|

@@ -73,6 +73,22 @@ pub fn GroupValidationResult::group_and_fields(
 }
 
 ///|
+/// General construction: group-level errors plus per-field error lists
+/// (aggregating adapters — e.g. the schema adapter — build results this
+/// way; entries are (relative key, messages) pairs).
+pub fn GroupValidationResult::make(
+  group_errors : Array[String],
+  field_errors : Array[(Key, Array[String])],
+) -> GroupValidationResult {
+  let fields : Array[GroupFieldError] = []
+  for pair in field_errors {
+    let (k, msgs) = pair
+    fields.push({ key: k, errors: msgs.copy(), })
+  }
+  { group_errors: group_errors.copy(), field_errors: fields, }
+}
+
+///|
 /// Group validator protocol: receives the group value and the whole form
 /// value; returns the group's validation result (empty = valid).
 pub struct GroupValidator[G, V] {
@@ -221,6 +237,11 @@ pub fn[V, G] FormGroupApi::mount(self : FormGroupApi[V, G]) -> Unit {
       Some(cb) => cb((self.lens.get)(values))
       None => ()
     }
+    // a change inside the group supersedes the group's onMount judgment —
+    // mirrors field-level set_value clearing Mount errors on write
+    if self.error_map.get(Mount) is Some(_) {
+      self.error_map = self.error_map.set(Mount, None)
+    }
     self.run_validation_against(Change, values)
     if self.validation.on_change_async is Some(_) {
       self.schedule_async_validation()
@@ -291,6 +312,11 @@ pub fn[V, G] FormGroupApi::set_value(
 ) -> Unit {
   self.form.values = (self.lens.set)(self.form.values, value)
   self.is_touched = true
+  // a group write supersedes the group's onMount judgment (mirrors field
+  // set_value clearing Mount errors on write)
+  if self.error_map.get(Mount) is Some(_) {
+    self.error_map = self.error_map.set(Mount, None)
+  }
   match self.on_change_l {
     Some(cb) => cb(value)
     None => ()

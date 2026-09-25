@@ -282,6 +282,7 @@ pub fn GroupValidationResult::equal(Self, Self) -> Bool
 pub fn GroupValidationResult::fields(Array[(Key, String)]) -> Self
 pub fn GroupValidationResult::group_and_fields(String, Array[(Key, String)]) -> Self
 pub fn GroupValidationResult::group_error(String) -> Self
+pub fn GroupValidationResult::make(Array[String], Array[(Key, Array[String])]) -> Self
 pub fn GroupValidationResult::not_equal(Self, Self) -> Bool
 pub fn GroupValidationResult::to_repr(Self) -> @debug.Repr
 pub fn GroupValidationResult::valid() -> Self
