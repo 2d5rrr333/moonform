@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-09-25
+
+### Performance
+
+Hot-path tuning for the derived-state checks every bridge snapshot runs
+on each notification (behavior-preserving; the full suite guards the
+semantics):
+
+- `Key::has_prefix` no longer allocates (it used to build the stripped
+  tail through `strip_prefix` just to answer a Boolean) — this runs on
+  every value change for group dispatch and prefix-subscription matching
+- `ErrorMap::has_errors` early-exits per slot instead of flattening the
+  whole error list
+- form-level `is_touched` / `is_blurred` / `is_dirty` /
+  `is_valid_fields` / `is_validating_any` / `can_submit` return on first
+  hit instead of scanning every entry
+- group-level `is_touched` / `is_fields_valid` / `can_submit` are
+  single-pass over the meta store (no sorted `keys_under` materialization)
+- `can_submit` short-circuits the untouched-and-clean path before the
+  full validity scan
+
+### Added
+
+- `examples/bench`: timed smoke over a 500-field array form (mount,
+  validated writes, derived sweeps, group checks, remove-triggered
+  migration) with correctness assertions — wired into CI. Measured on js:
+  ~9ms mount, ~12ms for 500 validated writes, ~23ms for 100 full
+  derived-state sweeps, ~2ms for the remove(0) meta migration
+- Core scale smoke tests: error migration across 200 array slots,
+  submission over 200 mounted fields, prefix-subscription fan-out under
+  batch
+
+### Tests
+
+- 292 tests on js, 275 on wasm
+
 ## [0.7.0] - 2026-09-25
 
 ### Added

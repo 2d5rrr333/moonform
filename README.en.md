@@ -197,8 +197,8 @@ More in [examples/README](src/examples/README.md). **Browser demos** (login form
 ## Tests & acceptance
 
 ```bash
-moon test --target js      # 289 tests (incl. upstream translations + doc-tests)
-moon test --target wasm    # 272 tests
+moon test --target js      # 292 tests (incl. upstream translations + doc-tests)
+moon test --target wasm    # 275 tests
 moon test --target native  # verified in CI (five green GitHub Actions jobs)
 moon run src/examples/login --target js   # example verification
 ```
