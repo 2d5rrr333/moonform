@@ -63,13 +63,12 @@ fn[V] FormApi::set_submit_error(self : FormApi[V], error : String?) -> Unit {
 ///|
 /// Are all recorded fields error-free? (upstream isFieldsValid)
 pub fn[V] FormApi::is_valid_fields(self : FormApi[V]) -> Bool {
-  let mut valid = true
   for _k, m in self.meta.entries {
     if m.has_errors() {
-      valid = false
+      return false
     }
   }
-  valid
+  true
 }
 
 ///|
@@ -77,33 +76,28 @@ pub fn[V] FormApi::is_valid_fields(self : FormApi[V]) -> Bool {
 /// and never attempted, or when not validating/submitting and valid.
 pub fn[V] FormApi::can_submit(self : FormApi[V]) -> Bool {
   let never_touched = !self.is_touched() && self.submission_attempts == 0
-  let no_mount_errors = {
-    let mut has = false
+  if never_touched {
     for _k, m in self.meta.entries {
       if m.error_map.get(Mount) is Some(_) {
-        has = true
+        return false // onMount errors block a first attempt
       }
     }
-    !has
+    return true
   }
-  (never_touched && no_mount_errors) ||
-  (
-    !self.is_validating_any() &&
-    !self.is_submitting &&
-    self.is_valid_fields() &&
-    !(self.submit_error is Some(_))
-  )
+  !self.is_validating_any() &&
+  !self.is_submitting &&
+  self.is_valid_fields() &&
+  !(self.submit_error is Some(_))
 }
 
 ///|
 fn[V] FormApi::is_validating_any(self : FormApi[V]) -> Bool {
-  let mut v = false
   for _k, m in self.meta.entries {
     if m.is_validating {
-      v = true
+      return true
     }
   }
-  v
+  false
 }
 
 ///|

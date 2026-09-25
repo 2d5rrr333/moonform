@@ -97,6 +97,8 @@ jobs:
         run: moon run src/examples/isomorphic-client --target js
       - name: Run isomorphic server example (native)
         run: moon run src/examples/isomorphic-server --target native
+      - name: Run performance bench (js, 500-field form)
+        run: moon run src/examples/bench --target js
       - name: lens-gen CLI self-check (regenerate + diff)
         run: |
           moon run src/lens-gen-cli --target js -- src/examples/generated/pkg.generated.mbti -o /tmp/gen.mbt

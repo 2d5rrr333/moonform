@@ -95,9 +95,20 @@ pub fn Key::strip_prefix(self : Key, prefix : Key) -> Key? {
 }
 
 ///|
-/// Does `self` start with `prefix`?
+/// Does `self` start with `prefix`? Whole-segment match, allocation-free
+/// (hot path: group dispatch and prefix-subscription matching run this on
+/// every value change).
 pub fn Key::has_prefix(self : Key, prefix : Key) -> Bool {
-  self.strip_prefix(prefix) is Some(_)
+  let n = prefix.segs.length()
+  if self.segs.length() < n {
+    return false
+  }
+  for i in 0..<n {
+    if self.segs[i] != prefix.segs[i] {
+      return false
+    }
+  }
+  true
 }
 
 ///|

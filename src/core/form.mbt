@@ -243,25 +243,23 @@ pub fn[V] FormApi::is_validating(self : FormApi[V]) -> Bool {
 ///|
 /// Any field's meta has `is_touched`.
 pub fn[V] FormApi::is_touched(self : FormApi[V]) -> Bool {
-  let mut touched = false
   for _k, m in self.meta.entries {
     if m.is_touched {
-      touched = true
+      return true
     }
   }
-  touched
+  false
 }
 
 ///|
 /// Any field's meta has `is_blurred`.
 pub fn[V] FormApi::is_blurred(self : FormApi[V]) -> Bool {
-  let mut blurred = false
   for _k, m in self.meta.entries {
     if m.is_blurred {
-      blurred = true
+      return true
     }
   }
-  blurred
+  false
 }
 
 ///|
@@ -269,18 +267,17 @@ pub fn[V] FormApi::is_blurred(self : FormApi[V]) -> Bool {
 /// against their effective default; fields written without a mounted
 /// instance use their stored dirty flag (upstream `isDirty`).
 pub fn[V] FormApi::is_dirty(self : FormApi[V]) -> Bool {
-  let mut dirty = false
   for _k, reg in self.field_regs {
     if (reg.probe_dirty)(self.values, self.default_values) {
-      dirty = true
+      return true
     }
   }
   for k, m in self.meta.entries {
     if !self.field_regs.contains(k) && m.is_dirty {
-      dirty = true
+      return true
     }
   }
-  dirty
+  false
 }
 
 ///|

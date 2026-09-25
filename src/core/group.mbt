@@ -579,8 +579,12 @@ pub fn[V, G] FormGroupApi::is_touched(self : FormGroupApi[V, G]) -> Bool {
   if self.is_touched {
     return true
   }
-  for k in self.form.meta.keys_under(self.lens.key) {
-    if self.form.meta.get_or_default(k).is_touched {
+  let p = self.lens.key
+  let plen = p.segs.length()
+  for k, m in self.form.meta.entries {
+    // strictly under the group key (the group's own meta entry is not a
+    // child field; group writes set the group flag above)
+    if k.segs.length() > plen && k.has_prefix(p) && m.is_touched {
       return true
     }
   }
@@ -591,17 +595,15 @@ pub fn[V, G] FormGroupApi::is_touched(self : FormGroupApi[V, G]) -> Bool {
 /// Are all child fields error-free? (upstream `state.meta.isFieldsValid` —
 /// includes errors distributed to fields that are not mounted yet).
 pub fn[V, G] FormGroupApi::is_fields_valid(self : FormGroupApi[V, G]) -> Bool {
-  let mut valid = true
-  match self.form.meta.get(self.lens.key) {
-    Some(m) => if m.has_errors() { valid = false }
-    None => ()
-  }
-  for k in self.form.meta.keys_under(self.lens.key) {
-    if self.form.meta.get_or_default(k).has_errors() {
-      valid = false
+  let p = self.lens.key
+  for k, m in self.form.meta.entries {
+    // prefix-inclusive: the group key's own meta entry may hold field
+    // errors when a field is mounted at the group's lens
+    if k.has_prefix(p) && m.has_errors() {
+      return false
     }
   }
-  valid
+  true
 }
 
 ///|
@@ -622,16 +624,19 @@ pub fn[V, G] FormGroupApi::is_valid(self : FormGroupApi[V, G]) -> Bool {
 /// validating and fully valid.
 pub fn[V, G] FormGroupApi::can_submit(self : FormGroupApi[V, G]) -> Bool {
   let never_touched = !self.is_touched() && self.submission_attempts == 0
-  let no_mount_errors = {
-    let mut has = self.error_map.get(Mount) is Some(_)
-    for k in self.form.meta.keys_under(self.lens.key) {
-      if self.form.meta.get_or_default(k).error_map.get(Mount) is Some(_) {
-        has = true
+  if never_touched {
+    if self.error_map.get(Mount) is Some(_) {
+      return false
+    }
+    let p = self.lens.key
+    for k, m in self.form.meta.entries {
+      if k.has_prefix(p) && m.error_map.get(Mount) is Some(_) {
+        return false
       }
     }
-    !has
+    return true
   }
-  (never_touched && no_mount_errors) || (!self.is_validating && self.is_valid())
+  !self.is_validating && self.is_valid()
 }
 
 ///|

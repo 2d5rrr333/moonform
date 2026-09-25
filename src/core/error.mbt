@@ -116,7 +116,18 @@ pub fn ErrorMap::flatten(self : ErrorMap) -> Array[String] {
 
 ///|
 pub fn ErrorMap::has_errors(self : ErrorMap) -> Bool {
-  self.flatten().length() > 0
+  // allocation-free early exit (flatten would build the whole list)
+  fn check(slot : Array[String]?) -> Bool {
+    match slot {
+      Some(errs) => errs.length() > 0
+      None => false
+    }
+  }
+  check(self.on_mount) ||
+  check(self.on_change) ||
+  check(self.on_blur) ||
+  check(self.on_submit) ||
+  check(self.on_server)
 }
 
 ///|
