@@ -1,0 +1,12 @@
+# Normalize line endings across platforms: text files are LF in the
+# repository and stay LF on checkout everywhere (generated artifacts like
+# profile_lenses.generated.mbt must diff byte-identically against the
+# lens-gen CLI's output on every platform).
+* text=auto eol=lf
+
+# Windows scripts keep CRLF
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+
+# Vendored third-party bundles are never touched
+web/vendor/* -text
