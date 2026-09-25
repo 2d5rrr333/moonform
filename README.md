@@ -209,6 +209,10 @@ mergeForm/类型层测试等）与有意偏离（值语义/虚拟时钟/lens 组
 FieldGroup 等 9 项）逐条记录于
 [upstream/PARITY.md](upstream/PARITY.md)。
 
+## 贡献
+
+见 [CONTRIBUTING.md](CONTRIBUTING.md)（环境准备、开发循环、项目约定、发布流程）。
+
 ## 致谢
 
 - [TanStack Form](https://github.com/TanStack/form)（MIT）——行为语义基准

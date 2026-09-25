@@ -39,6 +39,7 @@
 
 ```bash
 cd moonform
+moon update                            # 首次克隆/依赖变更后必跑（索引偶发滞后时重跑）
 moon test --target js --deny-warn       # 322
 moon test --target wasm --deny-warn     # 298
 moon check --target js/wasm/native --deny-warn   # 0 警告

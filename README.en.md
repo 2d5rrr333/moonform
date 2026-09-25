@@ -220,6 +220,10 @@ and deliberate deviations (value semantics / virtual clock / FieldGroup
 subsumed by lens composition, 9 items) are recorded case by case in
 [upstream/PARITY.md](upstream/PARITY.md).
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) (setup, dev loop, conventions, release flow).
+
 ## Credits
 
 - [TanStack Form](https://github.com/TanStack/form) (MIT) — behavior-semantics baseline
