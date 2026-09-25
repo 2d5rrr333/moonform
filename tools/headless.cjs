@@ -29,12 +29,17 @@ const TYPES = {
 };
 
 /// Serve a directory over HTTP. port 0 picks a free port.
+/// Localhost test helper only — still refuses path traversal outright.
 async function serveStatic(root, port = 0) {
   const server = createServer(async (req, res) => {
     try {
       const url = new URL(req.url, 'http://localhost');
       const file = url.pathname === '/' ? 'index.html' : url.pathname.slice(1);
-      const data = await readFile(path.join(root, file));
+      const resolved = path.resolve(root, file);
+      if (!resolved.startsWith(path.resolve(root) + path.sep)) {
+        throw new Error('path traversal refused');
+      }
+      const data = await readFile(resolved);
       res.writeHead(200, {
         'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream',
       });

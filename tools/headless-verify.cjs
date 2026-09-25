@@ -46,26 +46,30 @@ function report(checks) {
     console.log((ok ? 'PASS ' : 'FAIL ') + name);
     if (!ok) failed++;
   }
-  return failed;
+  return { failed, total: checks.length };
 }
 
 (async () => {
   const site = await serveStatic(ROOT, PORT);
   let totalFailed = 0;
+  let totalChecks = 0;
   try {
     // -- login demo --------------------------------------------------------
     const loginKv = parseSummary(await dumpPage(site, 'self-test.html'));
     if (!loginKv) {
       console.error('FAIL: no login test summary in DOM');
       totalFailed++;
+      totalChecks++;
     } else {
-      totalFailed += report([
+      const r = report([
         ['login: form rendered', loginKv['H2'] === 'Sign in'],
         ['login: invalid input shows errors', Number(loginKv['INVALID_COUNT']) > 0],
         ['login: errors mention email format', /email/i.test(loginKv['INVALID_ERRS'] || '')],
         ['login: valid input clears errors', loginKv['VALID_ERRS'] === '[]'],
         ['login: submit success message', /^Welcome, user@example\.com!$/.test(loginKv['OK'] || '')],
       ]);
+      totalFailed += r.failed;
+      totalChecks += r.total;
     }
 
     // -- wizard demo -------------------------------------------------------
@@ -73,8 +77,9 @@ function report(checks) {
     if (!wizKv) {
       console.error('FAIL: no wizard test summary in DOM');
       totalFailed++;
+      totalChecks++;
     } else {
-      totalFailed += report([
+      const r = report([
         ['wizard: step 1 rendered', wizKv['STEP1'] === 'Create your account'],
         ['wizard: schema errors distribute to fields', Number(wizKv['S1_INVALID_COUNT']) >= 2],
         ['wizard: Next blocked while group invalid', wizKv['AFTER_NEXT_INVALID'] === 'Create your account'],
@@ -86,12 +91,16 @@ function report(checks) {
         ['wizard: async submit shows in-flight state', wizKv['SUBMITTING'] === 'yes' && wizKv['SUBMIT_DISABLED'] === 'true'],
         ['wizard: async submit completes', /^Done, moon!$/.test(wizKv['OK'] || '')],
       ]);
+      totalFailed += r.failed;
+      totalChecks += r.total;
     }
 
+    // The count is derived from the checks actually registered above —
+    // adding a check must never require touching this line.
     console.log(
       totalFailed === 0
-        ? 'ALL 15 BROWSER CHECKS PASSED'
-        : `${totalFailed} CHECKS FAILED`
+        ? `ALL ${totalChecks} BROWSER CHECKS PASSED`
+        : `${totalFailed} OF ${totalChecks} CHECKS FAILED`
     );
     process.exit(totalFailed === 0 ? 0 : 1);
   } finally {
