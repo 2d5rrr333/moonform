@@ -52,9 +52,10 @@ moon add 2d5rrr333/moonform/rules
 | `core` | 零 | 状态机、Key/Lens、MetaStore、订阅、Clock、Validator、FormGroup、提交编排 |
 | `rules` | 零 | required/min/max/length/pattern/contains/equals/non_blank/numeric/must_be_true/自定义闭包 |
 | `schema` | vendor moonschema | moonschema 适配（JSON-Pointer 错误路径 → 字段错误槽） |
-| `react` | tiye/react | FieldBridge + use_field（js 目标） |
+| `react` | tiye/react | FieldBridge + use_field、GroupBridge + use_group（js 目标） |
 | `lens-gen` | 零 | .mbti 驱动的访问器代码生成器（增量增强） |
 | `examples/login` | 全部 | 登录表单示例（headless 验证可跑） |
+| `examples/wizard` | 全部 | FormGroup 分步表单示例（headless 验证可跑） |
 
 ## 快速开始
 
@@ -138,14 +139,29 @@ let state = @react.use_sync_external_store(
 // state.value / state.errors / state.is_touched ...
 ```
 
+组状态（React）——`GroupBridge` 前缀订阅整棵子树，子字段的任何变化
+（含分发到的错误）都刷新组快照：
+
+```moonbit
+let step1 = form.group(step1_l(), on_submit_validate=...)
+let gbridge = @formreact.GroupBridge::make(step1)
+let ghandle = @formreact.use_group_handle(gbridge)
+let gstate = @react.use_sync_external_store(
+  () => ghandle.subscribe(),
+  () => ghandle.get_snapshot(),
+)
+// gstate.value / gstate.errors / gstate.is_valid / gstate.can_submit ...
+gbridge.submit(on_group_submit=(v, _) => submit_step1(v))
+```
+
 更多见 [examples/README](src/examples/README.md)。**浏览器 demo**（React 登录表单，
 无头浏览器 5 项检查全过）：[web/](web/README.md)。
 
 ## 测试与验收
 
 ```bash
-moon test --target js      # 259 tests（含上游译文 + 文档测试）
-moon test --target wasm    # 254 tests
+moon test --target js      # 269 tests（含上游译文 + 文档测试）
+moon test --target wasm    # 258 tests
 moon test --target native  # CI 已验证（GitHub Actions 五作业全绿）
 moon run src/examples/login --target js   # 示例验收
 ```

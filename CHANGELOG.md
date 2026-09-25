@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-09-25
+
+### Added
+
+- **`react`: `GroupBridge` + `use_group`** — the group counterpart of
+  FieldBridge/use_field: a stable per-group snapshot (value, group errors,
+  is_fields_valid/is_group_valid/is_valid, can_submit, is_validating,
+  group-scoped submission_attempts) refreshed by a **prefix subscription**
+  so any child-field change (distributed errors, touched flags) updates the
+  group view; `bridge.submit` wires the group's submit button without
+  touching the parent form's submit state
+- **`core`: prefix subscriptions** — `FormApi::subscribe_under(key, kinds?)`
+  fires on the key itself and every key under it (whole-segment prefix
+  match); the natural subscription for group/subtree adapters
+- **`examples/wizard`**: multi-step form — per-step group validation with
+  both error channels at once (group-level + distributed), group
+  submissions that never touch the form's submit state or sibling groups,
+  and a final whole-form submit gated on every step being valid; wired
+  into CI
+- CI hardening: `moon check --deny-warn` on all three targets,
+  `moon test --deny-warn`, `moon fmt --check`, and an interface drift
+  guard (`moon info` + `git diff --exit-code` on `*.mbti` — the rules
+  package interface had drifted silently before)
+
+### Tests
+
+- 269 tests on js (react package gains 7 GroupBridge contract tests;
+  core gains 4 prefix-subscription tests), 258 on wasm; native check
+  clean, native tests run in CI
+
 ## [0.2.0] - 2026-09-25
 
 ### Added

@@ -55,9 +55,10 @@ self-claimed).
 | `core` | none | state machine, Key/Lens, MetaStore, subscriptions, Clock, Validator, FormGroup, submit |
 | `rules` | none | required/min/max/length/pattern/contains/equals/non_blank/numeric/must_be_true/custom closures |
 | `schema` | vendored moonschema | moonschema adapter (JSON-Pointer error paths → field slots) |
-| `react` | tiye/react | FieldBridge + use_field (js target) |
+| `react` | tiye/react | FieldBridge + use_field, GroupBridge + use_group (js target) |
 | `lens-gen` | none | .mbti-driven accessor generator (incremental enhancement) |
 | `examples/login` | all | login form example (headless-verified) |
+| `examples/wizard` | all | FormGroup multi-step form example (headless-verified) |
 
 ## Quick start
 
@@ -141,13 +142,28 @@ let state = @react.use_sync_external_store(
 // state.value / state.errors / state.is_touched ...
 ```
 
+Group state (React) — `GroupBridge` prefix-subscribes to the whole subtree;
+any child change (distributed errors included) refreshes the group snapshot:
+
+```moonbit
+let step1 = form.group(step1_l(), on_submit_validate=...)
+let gbridge = @formreact.GroupBridge::make(step1)
+let ghandle = @formreact.use_group_handle(gbridge)
+let gstate = @react.use_sync_external_store(
+  () => ghandle.subscribe(),
+  () => ghandle.get_snapshot(),
+)
+// gstate.value / gstate.errors / gstate.is_valid / gstate.can_submit ...
+gbridge.submit(on_group_submit=(v, _) => submit_step1(v))
+```
+
 More in [examples/README](src/examples/README.md).
 
 ## Tests & acceptance
 
 ```bash
-moon test --target js      # 259 tests (incl. upstream translations + doc-tests)
-moon test --target wasm    # 254 tests
+moon test --target js      # 269 tests (incl. upstream translations + doc-tests)
+moon test --target wasm    # 258 tests
 moon test --target native  # verified in CI (five green GitHub Actions jobs)
 moon run src/examples/login --target js   # example verification
 ```
