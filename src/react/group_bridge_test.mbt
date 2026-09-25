@@ -110,7 +110,7 @@ test "group bridge: distributed errors surface in the snapshot" {
   group.mount()
   let bridge = @react.GroupBridge::make(group)
   bridge.attach()
-  let submitted = { n: 0, }
+  let submitted : GroupCounter = { n: 0, }
   bridge.submit(on_group_submit=(_v, _meta) => submitted.n = submitted.n + 1, on_group_submit_invalid=() => {
     ()
   })

@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-09-25
+
+### Added
+
+- **`rules`: `one_of` / `one_of_str`** — enum-membership validation for
+  select/dropdown fields (any `Eq` type; string convenience wrapper),
+  completing the built-in rule set alongside equals/must_be_true
+- **`rules` doc-tests** (`README.mbt.md`): executable documentation for
+  the rule families — required/length chaining (with the documented
+  error-concatenation semantics of `then`), membership, format rules with
+  custom messages, and the custom-closure escape hatch
+- **`react` doc-tests** (`README.mbt.md`, js target): executable
+  documentation for the bridge trio — FieldBridge refresh-on-write,
+  GroupBridge submit gating on group validity, FormBridge submit-lifecycle
+  reflection. Every user-facing package (core, rules, schema, react) now
+  ships doc-tests
+
+### Tests
+
+- 302 tests on js, 282 on wasm (one_of unit tests + 4 doc-tests;
+  react doc-tests run on js only, matching the package's target)
+
 ## [0.7.1] - 2026-09-25
 
 ### Performance

@@ -270,3 +270,40 @@ fn slice_str(s : String, from : Int, until : Int) -> String {
   }
   buf.to_string()
 }
+
+///|
+/// The value must be one of the allowed values (enum/select validation).
+/// The allowed set may be empty only in degenerate configs; an empty set
+/// rejects everything.
+pub fn[A : Eq, V] one_of(
+  allowed : Array[A],
+  message? : String,
+) -> @core.Validator[A, V] {
+  let msg = message.unwrap_or("Must be one of the allowed values")
+  @core.validator(v => {
+    let mut hit = false
+    for a in allowed {
+      if v == a {
+        hit = true
+        break
+      }
+    }
+    if hit {
+      []
+    } else {
+      [msg]
+    }
+  })
+}
+
+///|
+/// String-select convenience over `one_of` (dropdown options etc.).
+pub fn[V] one_of_str(
+  allowed : Array[String],
+  message? : String,
+) -> @core.Validator[String, V] {
+  match message {
+    Some(m) => one_of(allowed, message=m)
+    None => one_of(allowed)
+  }
+}

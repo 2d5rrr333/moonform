@@ -32,6 +32,10 @@ pub fn[V] non_blank(message? : String) -> @core.Validator[String, V]
 
 pub fn[V] numeric(message? : String) -> @core.Validator[String, V]
 
+pub fn[A : Eq, V] one_of(Array[A], message? : String) -> @core.Validator[A, V]
+
+pub fn[V] one_of_str(Array[String], message? : String) -> @core.Validator[String, V]
+
 pub fn[V] required(message? : String) -> @core.Validator[String, V]
 
 pub fn[V] required_array(message? : String) -> @core.Validator[Array[String], V]

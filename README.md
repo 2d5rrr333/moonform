@@ -50,7 +50,7 @@ moon add 2d5rrr333/moonform/rules
 | 包 | 依赖 | 说明 |
 |---|---|---|
 | `core` | 零 | 状态机、Key/Lens、MetaStore、订阅、Clock、Validator、FormGroup、提交编排 |
-| `rules` | 零 | required/min/max/length/pattern/contains/equals/non_blank/numeric/must_be_true/自定义闭包 |
+| `rules` | 零 | required/min/max/length/pattern/contains/equals/one_of/non_blank/numeric/must_be_true/自定义闭包 |
 | `schema` | vendor moonschema | moonschema 适配（JSON-Pointer 错误路径 → 字段错误槽） |
 | `react` | tiye/react | FieldBridge + use_field、GroupBridge + use_group、FormBridge + use_form、real_clock 宿主时钟（js 目标） |
 | `lens-gen` | 零 | .mbti 驱动的访问器生成器 + CLI（`moon run src/lens-gen-cli -- <pkg.mbti> -o <out.mbt>`） |
@@ -192,8 +192,8 @@ FormGroup 分步表单，无头浏览器 15 项检查全过）：[web/](web/READ
 ## 测试与验收
 
 ```bash
-moon test --target js      # 292 tests（含上游译文 + 文档测试）
-moon test --target wasm    # 275 tests
+moon test --target js      # 302 tests（含上游译文 + 文档测试）
+moon test --target wasm    # 282 tests
 moon test --target native  # CI 已验证（GitHub Actions 五作业全绿）
 moon run src/examples/login --target js   # 示例验收
 ```
