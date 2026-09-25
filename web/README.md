@@ -40,20 +40,23 @@ wizard 的操作路径：
 1. step 1 输入过短用户名 / 非法 email → schema 错误按字段呈现；"Next" 被组校验拦截
 2. 修正 → 错误清除 → "Next" 进入 step 2
 3. 空 nickname 点 "Finish" → 组级错误 "Nickname is required"；过短 → 字段错误
-4. 填 "moon" → "Finish" → 组提交通过 → 整表提交 → "Done, moon!"
+4. 填 "moon" → "Finish" → **异步整表提交**（真实时钟宿主适配器）：按钮进入
+   "Submitting..." 禁用态（FormBridge 快照驱动）→ 600ms 后完成 → "Done, moon!"
 
 ## 无头验证
 
 ```bash
 node tools/headless-verify.cjs
-# → ALL 14 BROWSER CHECKS PASSED（login 5 + wizard 9）
+# → ALL 15 BROWSER CHECKS PASSED（login 5 + wizard 10）
 ```
 
 ## 实现说明
 
 - 表单状态/校验全部在 moonform（core + rules + schema），React 侧仅经
-  `FieldBridge` / `GroupBridge`（`use_sync_external_store` 契约）消费快照
+  `FieldBridge` / `GroupBridge` / `FormBridge`（`use_sync_external_store` 契约）消费快照
 - wizard 的 step 1 组校验器来自 `@formSchema.schema_group_validator`
   （moonschema 编译的 schema → 组值校验 → 错误按组内相对路径分发给子字段）
+- wizard 的最终提交是**异步**的：`@formreact.real_clock()` 宿主时钟（真实定时器）
+  驱动 `is_submitting` 生命周期——与测试中的 VirtualClock 同一协议
 - 宿主页提供 `globalThis.React / ReactDOM`（tiye/react 契约）
 - 组件源码：`src/web-demo/main.mbt`、`src/web-demo-wizard/main.mbt`

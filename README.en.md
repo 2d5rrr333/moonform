@@ -56,7 +56,7 @@ self-claimed).
 | `rules` | none | required/min/max/length/pattern/contains/equals/non_blank/numeric/must_be_true/custom closures |
 | `schema` | vendored moonschema | moonschema adapter (JSON-Pointer error paths → field slots) |
 | `react` | tiye/react | FieldBridge + use_field, GroupBridge + use_group, FormBridge + use_form, real_clock host clock (js target) |
-| `lens-gen` | none | .mbti-driven accessor generator (incremental enhancement) |
+| `lens-gen` | none | .mbti-driven accessor generator + CLI (`moon run src/lens-gen-cli -- <pkg.mbti> -o <out.mbt>`) |
 | `examples/login` | all | login form example (headless-verified) |
 | `examples/wizard` | all | FormGroup multi-step form example (headless-verified) |
 
@@ -196,8 +196,8 @@ More in [examples/README](src/examples/README.md). **Browser demos** (login form
 ## Tests & acceptance
 
 ```bash
-moon test --target js      # 284 tests (incl. upstream translations + doc-tests)
-moon test --target wasm    # 267 tests
+moon test --target js      # 286 tests (incl. upstream translations + doc-tests)
+moon test --target wasm    # 269 tests
 moon test --target native  # verified in CI (five green GitHub Actions jobs)
 moon run src/examples/login --target js   # example verification
 ```

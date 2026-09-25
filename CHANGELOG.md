@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-09-25
+
+### Added
+
+- **`lens-gen` CLI** (`src/lens-gen-cli`, js target): .mbti file in, lens
+  accessor source out —
+  `moon run src/lens-gen-cli -- <pkg.mbti> [-o <out.mbt>] [core_alias]`.
+  Reads the package interface produced by `moon info`, emits accessors for
+  every concrete struct, writes exact bytes with `-o` (or prints for
+  inspection). The emitter's output is now `moon fmt`-stable (doc-marker
+  and trailing-comma aligned), so regenerated files pass format checks
+  unchanged
+- **`examples/generated`**: the generator's end-to-end proof — a library
+  package whose lens accessors are checked in AS PRODUCED BY THE CLI
+  (`profile_lenses.generated.mbt`), consumed by a real form flow
+  (`run_demo`: validation errors per field, fix, submit — asserted by a
+  blackbox test). CI regenerates the file from the package's .mbti and
+  diffs it (freshness guard), so the generated artifact can never drift
+  from the generator
+- **`schema` doc-tests** (`README.mbt.md`): the schema group validator
+  flow as executable documentation (distribution by JSON-Pointer paths,
+  clearing on fix)
+
+### Tests
+
+- 286 tests on js, 269 on wasm
+
 ## [0.5.0] - 2026-09-25
 
 ### Added

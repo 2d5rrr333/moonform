@@ -1,12 +1,12 @@
 # moonform 项目状态速查
 
-> 用途：新会话打开时把本文件发给编程助手，即可无缝接续。最后更新：2026-09-25（0.5.0）。
+> 用途：新会话打开时把本文件发给编程助手，即可无缝接续。最后更新：2026-09-25（0.6.0）。
 
 ## 项目是什么
 
 **moonform** — MoonBit 原生 headless 表单状态库，语义对标 TanStack form-core@1.33.5（SHA 已验证 = main 分支）。
 - 仓库：https://github.com/2d5rrr333/moonform（master）
-- mooncakes：`2d5rrr333/moonform`（0.1.x–0.4.0 在线；**0.5.0 待发布**——本地已 bump，需 `moon publish`）
+- mooncakes：`2d5rrr333/moonform`（0.1.x–0.5.0 在线；**0.6.0 待发布**——本地已 bump，需 `moon publish`）
 - OpenSpec：变更 `add-moonform-core` 已归档，主 specs 在 `openspec/specs/moonform/`（7 capability）
 - 位置：`D:\code\moonbit\moonform`（workspace 根 `D:\code\moonbit`，其 openspec/ 记录了对账）
 
@@ -17,7 +17,7 @@
 新工具链的两个迁移要求已全库完成：
 1. `implicit_impl_as_method`：所有 derive/显式 impl 需要 `pub extend T with Trait::{...}`（已加 136 处，含 vendor 补丁——披露在 src/vendor/moonschema/NOTICE.md）
 2. `test_unqualified_package`：黑盒测试引用本包项需限定（@rules./@react./@schema.）；连字符包名（lens-gen）自引用别名不可用 → 其测试已转白盒（lens_gen_wbtest.mbt）
-另：README.mbt.md 的 doc 测试块标记若被破坏会**静默**不编译不计数（` ```mbt check ` 三反引号），改动后务必核对测试总数（js 284）。
+另：README.mbt.md 的 doc 测试块标记若被破坏会**静默**不编译不计数（` ```mbt check ` 三反引号），改动后务必核对测试总数（js 286）。
 
 ## 包结构
 
@@ -28,7 +28,8 @@
 | src/schema | moonschema 适配：字段级 schema_field_validator + **组级 schema_group_validator**（JSON-Pointer 错误按组内相对路径分发；vendor 源码在 src/vendor/moonschema，Apache-2.0 + NOTICE.md） |
 | src/react | FieldBridge/use_field、GroupBridge/use_group（前缀订阅）、FormBridge/use_form（整表快照）、real_clock 宿主时钟（js 目标） |
 | src/lens-gen | .mbti 解析器 + lens 生成器（幂等、改名安全）；测试为白盒 |
-| src/examples | login（schema 校验）+ roster（数组 meta 迁移）+ wizard（FormGroup 分步表单） |
+| src/lens-gen-cli | 生成器 CLI（js）：`moon run src/lens-gen-cli -- <pkg.mbti> [-o <out.mbt>] [core_alias]` |
+| src/examples | login（schema 校验）+ roster（数组 meta 迁移）+ wizard（FormGroup 分步表单）+ generated（CLI 生成访问器的端到端证明，CI 再生成守卫） |
 | src/web-demo | 浏览器登录组件（tiye/react）→ web/main.js |
 | src/web-demo-wizard | 浏览器分步组件（schema 组校验 + 双通道）→ web/wizard.js |
 | web/ | 浏览器 demo 宿主页（index/wizard + 两份 self-test）+ headless 验证（14 项） |
@@ -38,8 +39,8 @@
 
 ```bash
 cd moonform
-moon test --target js --deny-warn       # 284
-moon test --target wasm --deny-warn     # 267
+moon test --target js --deny-warn       # 286
+moon test --target wasm --deny-warn     # 269
 moon check --target js/wasm/native --deny-warn   # 0 警告
 moon fmt --check
 moon info                                # 接口文件同步（pkg.generated.mbti）
@@ -60,6 +61,7 @@ node tools/headless-verify.cjs          # login 5 + wizard 10（含异步提交�
 - 0.3.1：工具链迁移（0.1.20260920：136 处 pub extend、测试限定、vendor 补丁+NOTICE、web/main.js 重建）
 - 0.4.0：schema_group_validator（schema 包）+ GroupValidationResult::make + 浏览器 wizard demo（web/wizard.html，无头 14 项）+ **修复组 onMount 错误永不清除**（字段语义对齐）
 - 0.5.0：FormBridge/use_form（react 整表桥接）+ real_clock 宿主时钟（core Clock::make 入口）+ 嵌套组分发测试 + wizard demo 异步提交（无头 15 项）
+- 0.6.0：lens-gen CLI + examples/generated（生成物可编译证明 + CI 再生成守卫）+ schema 包 doc 测试
 
 ## 关键技术事实（避免重新踩坑）
 
@@ -79,9 +81,9 @@ node tools/headless-verify.cjs          # login 5 + wizard 10（含异步提交�
 
 ## 未完事项
 
-1. **0.5.0 发布**：`moon publish`（版本已 bump，CHANGELOG/README 已就绪）
-2. 申报书：需用户人工撰写，素材在 PROPOSAL-NOTES.md（已刷新至 0.5.0 口径）
-3. 可选后续：moonschema 上游正式发布后解除 vendor、lens-gen CLI 化、mergeForm/SSR
+1. **0.6.0 发布**：`moon publish`（版本已 bump，CHANGELOG/README 已就绪）
+2. 申报书：需用户人工撰写，素材在 PROPOSAL-NOTES.md（已刷新至 0.6.0 口径）
+3. 可选后续：moonschema 上游正式发布后解除 vendor、lens-gen CLI 化、mergeForm/SSR（lens-gen CLI 已完成）
 4. 章程要求：仓库文件中不得出现特定自动化工具类字样（已全库清理；web/vendor 与构建产物中的第三方压缩/生成标识符除外）
 
 ## 大赛章程要点（OSC 2026 / 9月黑客松）
