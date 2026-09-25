@@ -1,0 +1,46 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "2d5rrr333/moonform/examples/isomorphic"
+
+import {
+  "2d5rrr333/moonform/core",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn registration_age_l() -> @core.Lens[Registration, Int]
+
+pub fn registration_email_l() -> @core.Lens[Registration, String]
+
+pub fn registration_form() -> @core.FormApi[Registration]
+
+pub fn registration_terms_l() -> @core.Lens[Registration, Bool]
+
+pub fn registration_username_l() -> @core.Lens[Registration, String]
+
+pub fn registration_validators() -> RegistrationValidators
+
+pub fn server_review(Registration) -> Array[(String, Array[String])]
+
+// Errors
+
+// Types and methods
+pub(all) struct Registration {
+  username : String
+  email : String
+  age : Int
+  accept_terms : Bool
+} derive(Eq, @debug.Debug)
+pub fn Registration::equal(Self, Self) -> Bool
+pub fn Registration::not_equal(Self, Self) -> Bool
+pub fn Registration::to_repr(Self) -> @debug.Repr
+
+pub struct RegistrationValidators {
+  username : @core.Validator[String, Registration]
+  email : @core.Validator[String, Registration]
+  age : @core.Validator[Int, Registration]
+  terms : @core.Validator[Bool, Registration]
+}
+
+// Type aliases
+
+// Traits

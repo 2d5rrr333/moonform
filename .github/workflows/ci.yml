@@ -77,7 +77,7 @@ jobs:
         run: moon test --target native --deny-warn
 
   example:
-    name: Examples (login + roster + wizard, headless verification)
+    name: Examples (login + roster + wizard + isomorphic client/js + server/native)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -93,6 +93,10 @@ jobs:
         run: moon run src/examples/roster --target js
       - name: Run wizard example
         run: moon run src/examples/wizard --target js
+      - name: Run isomorphic client example (js)
+        run: moon run src/examples/isomorphic-client --target js
+      - name: Run isomorphic server example (native)
+        run: moon run src/examples/isomorphic-server --target native
       - name: lens-gen CLI self-check (regenerate + diff)
         run: |
           moon run src/lens-gen-cli --target js -- src/examples/generated/pkg.generated.mbti -o /tmp/gen.mbt

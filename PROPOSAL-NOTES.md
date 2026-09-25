@@ -1,7 +1,7 @@
 # moonform 项目说明素材
 
 > 本文件是项目的事实素材库，汇总可验证的项目事实，按"价值定位 / 交付范围 /
-> 实现路径"三个维度组织。数据截至 0.6.0。
+> 实现路径"三个维度组织。数据截至 0.7.0。
 
 ## 项目概况
 
@@ -9,7 +9,7 @@
 |---|---|
 | 项目名称 | moonform — MoonBit 原生 headless 表单状态库 |
 | GitHub 仓库 | https://github.com/2d5rrr333/moonform（master） |
-| 发布 | mooncakes.io `2d5rrr333/moonform@0.6.0`（0.1.0 → 0.6.0 共 7 版） |
+| 发布 | mooncakes.io `2d5rrr333/moonform@0.7.0`（0.1.0 → 0.7.0 共 8 版） |
 | 参考项目 | TanStack Form（@tanstack/form-core）https://github.com/TanStack/form — MIT。**语义移植而非代码移植**：以 form-core@1.33.5（v1 终点版，已验证与 main 逐字节一致）的上游测试集为行为规格，MoonBit 原生实现 |
 | 方向/通用性 | Web 基础设施：表单状态管理是所有 Web 应用的高频需求 |
 
@@ -43,7 +43,7 @@
   （前缀订阅整棵子树）+ FormBridge/use_form（整表快照）+ real_clock 宿主时钟
   （真实定时器桥接，与测试中的 VirtualClock 同一协议）
 - lens-gen：.mbti 驱动的访问器生成器 + CLI（生成物可编译、CI 再生成防漂移）
-- examples：login（schema 校验）+ roster（数组 meta 迁移）+ wizard（分步组表单）
+- examples：login（schema 校验）+ roster（数组 meta 迁移）+ wizard（分步组表单）+ generated（lens-gen 产物端到端）+ isomorphic（js 客户端 + native 服务端）
 - web/：浏览器 demo——登录表单 + 分步组表单 + 异步提交（无头浏览器 15 项检查全过）
 
 **明确不做**（工程边界）：
@@ -68,8 +68,9 @@
 1. **React 登录/注册表单**：tiye/react + moonschema 实时校验 email/password，
    错误按字段呈现，提交拦截（示例已含：`moon run src/examples/login --target js`；
    浏览器版见 web/index.html）
-2. **同构校验复用**：一份 Resolver 校验定义，wasm 前端做实时反馈，
-   native 服务端做最终校验——类型安全、零序列化损耗
+2. **同构校验复用**（examples/isomorphic，可运行产物）：一份字段校验器定义，
+   js 客户端做逐字段实时反馈，native 服务端用同一份定义做最终把关
+   （绕过 UI 的恶意载荷全字段拒绝）——CI 双目标跑，零序列化损耗、零逻辑重复
 3. **多步向导表单**（FormGroup 全栈）：schema 作组校验器，错误分发到子字段；
    组提交逐步把关、互不干扰；最终经真实时钟异步整表提交，提交中状态可见
    （`moon run src/examples/wizard --target js`；
@@ -79,13 +80,13 @@
 
 - 自有 MoonBit 代码 ~10,400 行 .mbt（其中测试 ~4,750 行；另有 vendored moonschema
   ~3,600 行已隔离披露，本地补丁逐条记录于 vendor NOTICE.md）
-- 测试 286（js）/ 269（wasm）全绿；native CI 通过；三目标 `moon check --deny-warn`
+- 测试 289（js）/ 272（wasm）全绿；native CI 通过；三目标 `moon check --deny-warn`
   0 警告；`moon fmt --check` 通过；接口文件随 CI 漂移守卫同步
 - CI（GitHub Actions）五作业全绿：check×3 目标（含 fmt + 接口漂移守卫）、
   test×3 目标、示例运行
 - 浏览器 demo：无头 Edge 15 项检查全过（登录 5：渲染/错误呈现/清除/提交；
   向导 10：schema 分发/组拦截/步骤流转/双通道校验/异步提交中态/完成）
-- 已发布：mooncakes.io `2d5rrr333/moonform@0.6.0`
+- 已发布：mooncakes.io `2d5rrr333/moonform@0.7.0`
 - 开源合规：MIT；上游 TanStack Form MIT（upstream/ 附许可文本与 SHA 溯源）；
   vendored moonschema Apache-2.0（保留其 LICENSE + 本地修改披露）；差异对照表 PARITY.md
 - 过程质量：真实 bug 修复 4 例均由测试暴露（数组过期索引崩溃、React notify 契约、

@@ -90,6 +90,28 @@ let state = @react.use_sync_external_store(
 变化——分发到子字段的错误、touched 派生都挂在子字段上，整棵子树的任何变化
 都会刷新组快照。
 
+## isomorphic —— 一份校验定义，js 客户端 + native 服务端
+
+对应"同构校验复用"场景：`isomorphic`（库）持有唯一的字段校验器定义，
+`isomorphic-client`（js）用它做实时反馈，`isomorphic-server`（native）
+用同一份定义做服务端最终把关——零序列化损耗、零逻辑重复。
+
+### 无头验证（本仓库 CI 可跑）
+
+```bash
+moon run src/examples/isomorphic-client --target js
+moon run src/examples/isomorphic-server --target native   # 需 C 编译器（CI 的 ubuntu 有）
+# → isomorphic client/server: all checks passed
+```
+
+验证的场景：
+
+1. **实时反馈（客户端）**：非法输入逐字段报错、修正即清除、提交通过
+2. **最终把关（服务端）**：绕过 UI 的恶意载荷四个字段全部拒绝；
+   修正载荷接受；部分非法只报该字段
+3. **同构性本身**：`isomorphic` 的黑盒测试在 js/wasm/native 三目标运行
+   （CI 三份 test 作业各跑一遍）——同一断言跨目标成立
+
 ### 包结构说明
 
 - `core` / `rules`：零依赖（moon.mod 的 `deps` 仅为 react 示例与适配层存在）

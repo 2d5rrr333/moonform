@@ -56,6 +56,7 @@ moon add 2d5rrr333/moonform/rules
 | `lens-gen` | 零 | .mbti 驱动的访问器生成器 + CLI（`moon run src/lens-gen-cli -- <pkg.mbti> -o <out.mbt>`） |
 | `examples/login` | 全部 | 登录表单示例（headless 验证可跑） |
 | `examples/wizard` | 全部 | FormGroup 分步表单示例（headless 验证可跑） |
+| `examples/isomorphic` | 全部 | 同构校验：js 客户端实时反馈 + native 服务端把关（CI 双目标跑） |
 
 ## 快速开始
 
@@ -191,8 +192,8 @@ FormGroup 分步表单，无头浏览器 15 项检查全过）：[web/](web/READ
 ## 测试与验收
 
 ```bash
-moon test --target js      # 286 tests（含上游译文 + 文档测试）
-moon test --target wasm    # 269 tests
+moon test --target js      # 289 tests（含上游译文 + 文档测试）
+moon test --target wasm    # 272 tests
 moon test --target native  # CI 已验证（GitHub Actions 五作业全绿）
 moon run src/examples/login --target js   # 示例验收
 ```

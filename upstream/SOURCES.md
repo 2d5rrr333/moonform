@@ -28,4 +28,4 @@
 
 未下载（全部豁免）：`*.test-d.ts` 类型层测试 7 篇（TS 类型体操，被编译期安全的访问器设计取代）。
 
-译文覆盖口径与豁免理由详见 `openspec/specs/moonform/upstream-parity`（变更：`openspec/changes/add-moonform-core`）；逐篇对账清单见 `PARITY.md`（随任务 8.1 产出）。
+译文覆盖口径与豁免理由逐篇对账见 [PARITY.md](PARITY.md)。

@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-09-25
+
+### Added
+
+- **`examples/isomorphic`**: the isomorphic-validation scenario as a
+  runnable artifact — ONE shared set of field validators (rules-based,
+  zero deps) consumed by BOTH sides of the wire:
+  - `examples/isomorphic` (library): the shared definitions + the
+    server-side gate (`server_review` replays the validators through a
+    fresh form instance)
+  - `examples/isomorphic-client` (js executable): real-time per-field
+    feedback while typing, clearing on fix, submit accepted
+  - `examples/isomorphic-server` (native executable): the final gate —
+    a hostile payload (UI bypassed) rejected on every field, a corrected
+    payload accepted, partial invalidity reported per field
+  - CI runs the client on js and the server on native; the library's
+    blackbox tests run on all three targets (the isomorphism claim
+    itself is asserted cross-target)
+- upstream/SOURCES.md: replaced a dangling out-of-repo openspec path
+  with the in-repo PARITY.md reference
+
+### Tests
+
+- 289 tests on js, 272 on wasm (3 isomorphic blackbox tests)
+
 ## [0.6.0] - 2026-09-25
 
 ### Added

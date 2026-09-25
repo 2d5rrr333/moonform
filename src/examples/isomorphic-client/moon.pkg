@@ -1,0 +1,8 @@
+import {
+  "2d5rrr333/moonform/core",
+  "2d5rrr333/moonform/examples/isomorphic",
+}
+
+supported_targets = "js"
+
+pkgtype(kind: "executable")
