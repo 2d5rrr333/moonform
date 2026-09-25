@@ -31,7 +31,7 @@ moon test --target wasm --deny-warn
 ```bash
 moon run src/examples/login --target js      # 示例验收
 moon run src/examples/wizard --target js
-node tools/headless-verify.cjs               # 浏览器 15 项（需先构建 web/main.js、web/wizard.js，见 web/README.md）
+node tools/headless-verify.cjs               # 浏览器检查全过（需先构建 web/main.js、web/wizard.js，见 web/README.md）
 ```
 
 ## 项目约定

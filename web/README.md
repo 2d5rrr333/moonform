@@ -47,7 +47,7 @@ wizard 的操作路径：
 
 ```bash
 node tools/headless-verify.cjs
-# → ALL 15 BROWSER CHECKS PASSED（login 5 + wizard 10）
+# → ALL <N> BROWSER CHECKS PASSED（login + wizard，N 由注册的检查项动态推导）
 ```
 
 ## 实现说明

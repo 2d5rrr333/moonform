@@ -99,7 +99,7 @@ jobs:
         run: moon test --target native --deny-warn
 
   example:
-    name: Examples (login + roster + wizard + isomorphic + bench)
+    name: Examples + README verifier (published-package downstream check)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

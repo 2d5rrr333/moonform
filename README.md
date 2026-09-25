@@ -189,7 +189,7 @@ let form = @core.FormApi::make(values).with_clock(@formreact.real_clock())
 ```
 
 更多见 [examples/README](src/examples/README.md)。**浏览器 demo**（登录表单 +
-FormGroup 分步表单，无头浏览器 15 项检查全过）：[web/](web/README.md)。
+FormGroup 分步表单，无头浏览器全部检查通过）：[web/](web/README.md)。
 
 ## 测试与验收
 

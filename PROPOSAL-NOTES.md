@@ -44,7 +44,7 @@
   （真实定时器桥接，与测试中的 VirtualClock 同一协议）
 - lens-gen：.mbti 驱动的访问器生成器 + CLI（生成物可编译、CI 再生成防漂移）
 - examples：login（schema 校验）+ roster（数组 meta 迁移）+ wizard（分步组表单）+ generated（lens-gen 产物端到端）+ isomorphic（js 客户端 + native 服务端）
-- web/：浏览器 demo——登录表单 + 分步组表单 + 异步提交（无头浏览器 15 项检查全过）
+- web/：浏览器 demo——登录表单 + 分步组表单 + 异步提交（无头浏览器全部检查通过）
 
 **明确不做**（工程边界）：
 - mergeForm/SSR 场景、devtools、多框架适配（v1 只交付 tiye/react）
@@ -84,8 +84,9 @@
   0 警告；`moon fmt --check` 通过；接口文件随 CI 漂移守卫同步
 - CI（GitHub Actions）五作业全绿：check×3 目标（含 fmt + 接口漂移守卫）、
   test×3 目标、示例运行
-- 浏览器 demo：无头 Edge 15 项检查全过（登录 5：渲染/错误呈现/清除/提交；
-  向导 10：schema 分发/组拦截/步骤流转/双通道校验/异步提交中态/完成）
+- 浏览器 demo：无头 Edge 全部检查通过（登录：渲染/错误呈现/清除/提交；
+  向导：schema 分发/组拦截/步骤流转/双通道校验/异步提交中态/完成——检查项由
+  验证工具动态计数）
 - 已发布：mooncakes.io `2d5rrr333/moonform@0.8.4`
 - 开源合规：MIT；上游 TanStack Form MIT（upstream/ 附许可文本与 SHA 溯源）；
   vendored moonschema Apache-2.0（保留其 LICENSE + 本地修改披露）；差异对照表 PARITY.md

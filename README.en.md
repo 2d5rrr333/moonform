@@ -199,7 +199,7 @@ let form = @core.FormApi::make(values).with_clock(@formreact.real_clock())
 // in tests for deterministic advancement
 ```
 
-More in [examples/README](src/examples/README.md). **Browser demos** (login form + FormGroup multi-step wizard, 15 headless browser checks): [web/](web/README.md).
+More in [examples/README](src/examples/README.md). **Browser demos** (login form + FormGroup multi-step wizard, all headless browser checks passing): [web/](web/README.md).
 
 ## Tests & acceptance
 
