@@ -1,4 +1,4 @@
-name: CI
+﻿name: CI
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   check:
-    name: Check (js/wasm/native)
+    name: Check (js/wasm/native) + fmt + interface drift
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -18,11 +18,21 @@ jobs:
       - name: Update registry index
         run: moon update
       - name: Check (js)
-        run: moon check --target js
+        run: moon check --target js --deny-warn
       - name: Check (wasm)
-        run: moon check --target wasm
+        run: moon check --target wasm --deny-warn
       - name: Check (native)
-        run: moon check --target native
+        run: moon check --target native --deny-warn
+      - name: Format check
+        run: moon fmt --check
+      - name: Interface drift guard (moon info)
+        run: |
+          moon info
+          git diff --exit-code -- '*.mbti' || {
+            echo '::error::pkg.generated.mbti drifted — run "moon info" and commit the result'
+            git diff -- '*.mbti'
+            exit 1
+          }
 
   test-js:
     name: Test (js)
@@ -36,7 +46,7 @@ jobs:
       - name: Update registry index
         run: moon update
       - name: Test
-        run: moon test --target js
+        run: moon test --target js --deny-warn
 
   test-wasm:
     name: Test (wasm)
@@ -50,7 +60,7 @@ jobs:
       - name: Update registry index
         run: moon update
       - name: Test
-        run: moon test --target wasm
+        run: moon test --target wasm --deny-warn
 
   test-native:
     name: Test (native)
@@ -64,10 +74,10 @@ jobs:
       - name: Update registry index
         run: moon update
       - name: Test
-        run: moon test --target native
+        run: moon test --target native --deny-warn
 
   example:
-    name: Examples (login + roster, headless verification)
+    name: Examples (login + roster + wizard, headless verification)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -81,3 +91,5 @@ jobs:
         run: moon run src/examples/login --target js
       - name: Run roster example
         run: moon run src/examples/roster --target js
+      - name: Run wizard example
+        run: moon run src/examples/wizard --target js
