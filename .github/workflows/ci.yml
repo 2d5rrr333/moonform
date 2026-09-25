@@ -93,3 +93,7 @@ jobs:
         run: moon run src/examples/roster --target js
       - name: Run wizard example
         run: moon run src/examples/wizard --target js
+      - name: lens-gen CLI self-check (regenerate + diff)
+        run: |
+          moon run src/lens-gen-cli --target js -- src/examples/generated/pkg.generated.mbti -o /tmp/gen.mbt
+          diff /tmp/gen.mbt src/examples/generated/profile_lenses.generated.mbt

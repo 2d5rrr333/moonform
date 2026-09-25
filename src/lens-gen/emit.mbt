@@ -2,10 +2,12 @@
 
 ///|
 /// Emit one accessor function for `struct_name.field` as MoonBit source.
-/// Shape mirrors the hand-written convention:
+/// Shape mirrors the hand-written convention (and `moon fmt` output —
+/// the regenerated files pass format checks unchanged):
 ///
+///   ///|
 ///   fn loginform_email_l() -> @core.Lens[LoginForm, String] {
-///     @core.field("email", v => v.email, (v, x) => { ..v, email: x })
+///     @core.field("email", v => v.email, (v, x) => { ..v, email: x, })
 ///   }
 ///
 /// Non-generic structs only (form value types are concrete); structs with
@@ -17,8 +19,9 @@ pub fn emit_lens(
 ) -> String {
   let fname = "\{snake(struct_name)}_\{snake(field.name)}_l"
   let lines : Array[String] = [
+    "///|",
     "fn \{fname}() -> \{core_alias}.Lens[\{struct_name}, \{field.type_ref}] {",
-    "  \{core_alias}.field(\"\{field.name}\", v => v.\{field.name}, (v, x) => { ..v, \{field.name}: x })",
+    "  \{core_alias}.field(\"\{field.name}\", v => v.\{field.name}, (v, x) => { ..v, \{field.name}: x, })",
     "}",
   ]
   lines.join("\n")

@@ -71,8 +71,9 @@ test "emitter: concrete struct emits an accessor per field" {
 test "emitter: generated accessor shape matches the manual convention" {
   let structs = parse_only(core_mbti_sample())
   let code = emit_all(structs, "@core")
+  // fmt-stable shape: ///| marker + trailing comma in the record update
   let expected = [
-    "fn key_segs_l() -> @core.Lens[Key, Array[Seg]] {", "  @core.field(\"segs\", v => v.segs, (v, x) => { ..v, segs: x })",
+    "///|", "fn key_segs_l() -> @core.Lens[Key, Array[Seg]] {", "  @core.field(\"segs\", v => v.segs, (v, x) => { ..v, segs: x, })",
     "}",
   ].join("\n")
   assert_true(code.contains(expected))
