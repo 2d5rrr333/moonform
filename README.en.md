@@ -1,4 +1,4 @@
-﻿# moonform
+# moonform
 
 Native headless form state library for MoonBit. **Architecture inspired by [TanStack Form](https://github.com/TanStack/form)** (MIT).
 
@@ -43,7 +43,7 @@ self-claimed).
 - **Headless form state machine** — field values, dirty/touched, error derivation, subscriptions, submit orchestration. Behavior-parity with `@tanstack/form-core@1.33.5` via translated upstream tests ([upstream/PARITY.md](upstream/PARITY.md))
 - **Structured field accessors (lens)** — replaces dot-path strings with `(key, get, set)` triples: compile-time safe, rename-safe; array operations (push/insert/remove/swap/move/replace) with meta migration
 - **Field groups (FormGroup)** — lens-prefix grouping: group-level validators (group errors + distribution to child fields, deferred for not-yet-mounted fields), group-scoped submission (never touches the form's submit state), form-level onChange/onChangeGroup listeners with independent debounce
-- **Resolver protocol** — pluggable validators: built-in lightweight rules + moonschema (zod-style JSON Schema) adapter
+- **Resolver protocol** — pluggable validators: built-in lightweight rules + moonschema (zod-style JSON Schema) adapter; a schema works as a field validator (`schema_field_validator`) or a **group validator** (`schema_group_validator`, distributing errors to child fields by group-relative paths)
 - **Adapter protocol** — the core never renders; the tiye/react adapter bridges via `use_sync_external_store`
 - **Multi-target** — core/rules are dependency-free and compile to js/wasm/native; the same validation definition runs on server and client (isomorphic)
 - **Virtual clock** — debounce/race-abort/async-submit against an injected `Clock` protocol: deterministic virtual-time tests, no real timers
@@ -130,6 +130,18 @@ step1.handle_submit(
 )
 ```
 
+A group validator can also be a compiled moonschema schema (errors
+distribute to child fields by their JSON-Pointer paths relative to the
+group — see the `/schema` package):
+
+```moonbit
+let step_schema = @builder.object({ "name": @builder.string().min_len(2) }).compile()...
+let step1 = form.group(
+  step1_l(),
+  on_submit_validate=@formSchema.schema_group_validator(step_schema),
+)
+```
+
 React (tiye/react):
 
 ```moonbit
@@ -157,13 +169,13 @@ let gstate = @react.use_sync_external_store(
 gbridge.submit(on_group_submit=(v, _) => submit_step1(v))
 ```
 
-More in [examples/README](src/examples/README.md).
+More in [examples/README](src/examples/README.md). **Browser demos** (login form + FormGroup multi-step wizard, 14 headless browser checks): [web/](web/README.md).
 
 ## Tests & acceptance
 
 ```bash
-moon test --target js      # 269 tests (incl. upstream translations + doc-tests)
-moon test --target wasm    # 258 tests
+moon test --target js      # 277 tests (incl. upstream translations + doc-tests)
+moon test --target wasm    # 266 tests
 moon test --target native  # verified in CI (five green GitHub Actions jobs)
 moon run src/examples/login --target js   # example verification
 ```

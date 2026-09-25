@@ -1,15 +1,15 @@
 # moonform 项目说明素材
 
 > 本文件是项目的事实素材库，汇总可验证的项目事实，按"价值定位 / 交付范围 /
-> 实现路径"三个维度组织。数据截至 0.2.0。
+> 实现路径"三个维度组织。数据截至 0.4.0。
 
 ## 项目概况
 
 | 项 | 内容 |
 |---|---|
 | 项目名称 | moonform — MoonBit 原生 headless 表单状态库 |
-| GitHub 仓库 | https://github.com/2d5rrr333/moonform（23 commits，master） |
-| 发布 | mooncakes.io `2d5rrr333/moonform@0.2.0`（0.1.0/0.1.1/0.2.0） |
+| GitHub 仓库 | https://github.com/2d5rrr333/moonform（master） |
+| 发布 | mooncakes.io `2d5rrr333/moonform@0.4.0`（0.1.0 → 0.4.0 共 5 版） |
 | 参考项目 | TanStack Form（@tanstack/form-core）https://github.com/TanStack/form — MIT。**语义移植而非代码移植**：以 form-core@1.33.5（v1 终点版，已验证与 main 逐字节一致）的上游测试集为行为规格，MoonBit 原生实现 |
 | 方向/通用性 | Web 基础设施：表单状态管理是所有 Web 应用的高频需求 |
 
@@ -30,18 +30,20 @@
 
 ## 维度 2：交付范围与工程边界
 
-**已交付**（v0.2.0，已发布 mooncakes.io）：
+**已交付**（v0.4.0，已发布 mooncakes.io）：
 - core：FormApi/FieldApi 状态机、结构化访问器（lens，替代 dot-path 字符串）、
-  数组字段 7 种操作 + meta 迁移、订阅/批处理、校验协议（同步 + 异步防抖/竞态中止）、
+  数组字段 7 种操作 + meta 迁移、订阅/批处理/前缀订阅、校验协议（同步 + 异步防抖/竞态中止）、
   虚拟时钟、提交编排（preventDefault/异步提交/canSubmit）、
-  **FormGroupApi（组级校验 + 错误分发到子字段 + 组内提交）、
-  form 级 onChange/onChangeGroup 监听器（独立防抖）、FieldApi::reset**
+  FormGroupApi（组级校验 + 错误分发到子字段 + 组内提交）、
+  form 级 onChange/onChangeGroup 监听器（独立防抖）、FieldApi::reset
 - rules：零依赖内置规则包（required/min/max/length/pattern/email/url 等 16 个规则）
-- schema：moonschema（JSON Schema）适配
-- react：tiye/react 适配器（use_sync_external_store 桥接，notify 契约）
+- schema：moonschema 适配——字段级（schema_field_validator）与**组级**
+  （schema_group_validator，JSON-Pointer 错误按组内相对路径分发）
+- react：tiye/react 适配器——FieldBridge/use_field + GroupBridge/use_group
+  （前缀订阅整棵子树）
 - lens-gen：.mbti 驱动的访问器生成器
-- examples：login（moonschema 校验）+ roster（数组 meta 迁移演示）
-- web/：浏览器 demo（无头浏览器 5 项检查全过）
+- examples：login（schema 校验）+ roster（数组 meta 迁移）+ wizard（分步组表单）
+- web/：浏览器 demo——登录表单 + 分步组表单（无头浏览器 14 项检查全过）
 
 **明确不做**（工程边界）：
 - mergeForm/SSR 场景、devtools、多框架适配（v1 只交付 tiye/react）
@@ -53,7 +55,7 @@
 三条关键路径决策（探索阶段 spike 验证过，非拍脑袋）：
 1. **dot-path 字符串 → 结构化 lens**：TS 用字符串路径 + 类型体操；MoonBit 没有这套
    机制，改为 `(key, get, set)` 三元组组合子——编译期安全、重构改名不失配，
-   key 由组合派生支撑数组 meta 迁移与字段组前缀查询（上游最大两块测试）
+   key 由组合派生支撑数组 meta 迁移、字段组前缀查询与前缀订阅（上游三大测试块）
 2. **Promise/微任务 → 虚拟时钟协议**：MoonBit 的 async 运行时不支持 wasm 且违反
    核心零依赖约束；防抖/竞态/异步提交全部对注入的 Clock 协议实现——测试确定性
    虚拟时间推进（上游 vitest fake timers 本就是同模式）
@@ -64,21 +66,25 @@
 
 1. **React 登录/注册表单**：tiye/react + moonschema 实时校验 email/password，
    错误按字段呈现，提交拦截（示例已含：`moon run src/examples/login --target js`；
-   浏览器版见 web/）
+   浏览器版见 web/index.html）
 2. **同构校验复用**：一份 Resolver 校验定义，wasm 前端做实时反馈，
    native 服务端做最终校验——类型安全、零序列化损耗
-3. **动态数组表单 + 分步表单**：可增删排序的列表编辑（roster 示例，remove/swap 时
-   字段错误随元素迁移）；多步向导按 FormGroup 分组校验/分组提交，
-   组错误分发到子字段且不阻塞其他步骤（core 文档测试含完整示例）
+3. **多步向导表单**（FormGroup 全栈）：schema 作组校验器，错误分发到子字段；
+   组提交逐步把关、互不干扰；最终整表提交（`moon run src/examples/wizard --target js`；
+   浏览器版 web/wizard.html，无头 9 项检查全过）
 
 ## 工程数据（佐证"真实可用"）
 
-- 自有 MoonBit 代码 ~8,800 行 .mbt（52 个文件；其中测试 4,100+ 行；另有 vendored
-  moonschema ~3,600 行已隔离披露）
-- 测试 259（js）/ 254（wasm）全绿；native CI 通过；三目标 `moon check --deny-warn`
-  0 警告；`moon fmt --check` 通过
-- CI（GitHub Actions）覆盖 check×3 目标 + test×3 目标 + 示例运行
-- 浏览器 demo：无头 Edge 5 项检查全过（渲染/错误呈现/错误清除/提交）
-- 已发布：mooncakes.io `2d5rrr333/moonform@0.2.0`
+- 自有 MoonBit 代码 ~10,400 行 .mbt（其中测试 ~4,750 行；另有 vendored moonschema
+  ~3,600 行已隔离披露，本地补丁逐条记录于 vendor NOTICE.md）
+- 测试 277（js）/ 266（wasm）全绿；native CI 通过；三目标 `moon check --deny-warn`
+  0 警告；`moon fmt --check` 通过；接口文件随 CI 漂移守卫同步
+- CI（GitHub Actions）五作业全绿：check×3 目标（含 fmt + 接口漂移守卫）、
+  test×3 目标、示例运行
+- 浏览器 demo：无头 Edge 14 项检查全过（登录 5：渲染/错误呈现/清除/提交；
+  向导 9：schema 分发/组拦截/步骤流转/双通道校验/整表提交）
+- 已发布：mooncakes.io `2d5rrr333/moonform@0.4.0`
 - 开源合规：MIT；上游 TanStack Form MIT（upstream/ 附许可文本与 SHA 溯源）；
-  vendored moonschema Apache-2.0（保留其 LICENSE）；差异对照表 PARITY.md
+  vendored moonschema Apache-2.0（保留其 LICENSE + 本地修改披露）；差异对照表 PARITY.md
+- 过程质量：真实 bug 修复 4 例均由测试暴露（数组过期索引崩溃、React notify 契约、
+  组提交后 stale 分发错误、组 onMount 错误永不清除）

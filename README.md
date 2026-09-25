@@ -40,7 +40,7 @@ moon add 2d5rrr333/moonform/rules
 - **Headless 表单状态机**：字段值、dirty/touched、错误派生、按需订阅、提交编排——语义对标 `@tanstack/form-core@1.33.5`（上游测试集行为等价翻译，见 [upstream/PARITY.md](upstream/PARITY.md)）
 - **结构化字段访问器（lens）**：替代 dot-path 字符串——`(key, get, set)` 三元组组合子，编译期安全、重构改名不失配；数组字段操作（push/insert/remove/swap/move/replace）+ meta 迁移
 - **字段组（FormGroup）**：以 lens 为前缀的字段分组——组级校验器（组错误 + 错误分发到子字段，未挂载字段延迟浮现）、组内提交（不触碰表单提交态）、form 级 onChange/onChangeGroup 监听器（独立防抖）
-- **Resolver 协议**：校验器即插即用——内置轻量规则包（required/min/max/pattern/闭包）+ moonschema（zod-style JSON Schema）适配
+- **Resolver 协议**：校验器即插即用——内置轻量规则包（required/min/max/pattern/闭包）+ moonschema（zod-style JSON Schema）适配；schema 可作字段校验器（`schema_field_validator`）或**组校验器**（`schema_group_validator`，错误按组内相对路径分发给子字段）
 - **Adapter 协议**：核心不渲染；tiye/react 适配器经 `use_sync_external_store` 桥接
 - **跨目标**：core/rules 零第三方依赖，js/wasm/native 三目标可编译；同一校验定义服务端/前端复用（同构）
 - **虚拟时钟**：防抖/竞态中止/异步提交对注入的 `Clock` 协议实现——测试确定性推进虚拟时间，不依赖真实定时器
@@ -127,6 +127,17 @@ step1.handle_submit(
 )
 ```
 
+组校验器也可以直接用 moonschema 编译的 schema（错误按 JSON-Pointer 组内相对路径
+分发给子字段，见 `/schema` 包）：
+
+```moonbit
+let step_schema = @builder.object({ "name": @builder.string().min_len(2) }).compile()...
+let step1 = form.group(
+  step1_l(),
+  on_submit_validate=@formSchema.schema_group_validator(step_schema),
+)
+```
+
 React（tiye/react）：
 
 ```moonbit
@@ -154,14 +165,14 @@ let gstate = @react.use_sync_external_store(
 gbridge.submit(on_group_submit=(v, _) => submit_step1(v))
 ```
 
-更多见 [examples/README](src/examples/README.md)。**浏览器 demo**（React 登录表单，
-无头浏览器 5 项检查全过）：[web/](web/README.md)。
+更多见 [examples/README](src/examples/README.md)。**浏览器 demo**（登录表单 +
+FormGroup 分步表单，无头浏览器 14 项检查全过）：[web/](web/README.md)。
 
 ## 测试与验收
 
 ```bash
-moon test --target js      # 269 tests（含上游译文 + 文档测试）
-moon test --target wasm    # 258 tests
+moon test --target js      # 277 tests（含上游译文 + 文档测试）
+moon test --target wasm    # 266 tests
 moon test --target native  # CI 已验证（GitHub Actions 五作业全绿）
 moon run src/examples/login --target js   # 示例验收
 ```

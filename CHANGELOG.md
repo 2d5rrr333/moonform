@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-09-25
+
+### Added
+
+- **`schema`: `schema_group_validator`** — a compiled moonschema schema as a
+  group validator: validates the group value, distributes errors to child
+  fields by their JSON-Pointer paths relative to the group root
+  ("/username" → the group's username field, "/friends/0/name" → the nested
+  element key); root-path `required` errors distribute to the named
+  property, other root-path errors (e.g. `minItems` on an array group)
+  become group-level errors. JSON-Pointer parsing handles array indices and
+  escape-free tokens; covered by blackbox behavior tests (struct groups,
+  array groups, nested element fields) and whitebox unit tests
+- **`core`: `GroupValidationResult::make`** — general construction
+  (group errors + per-field message lists) for aggregating adapters
+- **Browser wizard demo** (`web/wizard.html`, `src/web-demo-wizard`):
+  multi-step group form end-to-end — step 1 validates through a moonschema
+  schema group validator (distributed field errors visible per input),
+  step 2 through a manual dual-channel validator (group-level + field
+  error); group submission gates each step, the final step submits the
+  whole form. Headless verification grows from 5 to **14 checks** (login 5
+  + wizard 9) in `tools/headless-verify.cjs`
+
+### Fixed
+
+- **Group onMount errors never cleared**: a group's own onMount error now
+  clears when a value inside the group changes (child write or whole-group
+  write), mirroring field-level `set_value` clearing Mount errors —
+  previously a stale onMount group error could never clear. Regression
+  tests included (surfaced by the schema group validator's array-group
+  test)
+
 ## [0.3.1] - 2026-09-25
 
 ### Changed
