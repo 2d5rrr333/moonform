@@ -6,6 +6,8 @@ import {
 }
 
 // Values
+pub fn[G, V] async_group_validator((G, V, Clock, (GroupValidationResult) -> Unit) -> Unit) -> AsyncGroupValidator[G, V]
+
 pub fn[A, V] async_validator((A, Clock, (Array[String]) -> Unit) -> Unit) -> AsyncValidator[A, V]
 
 pub fn[A, V] async_validator_with_form((A, V, Clock, (Array[String]) -> Unit) -> Unit) -> AsyncValidator[A, V]
@@ -15,6 +17,10 @@ pub fn[S, A] at(Lens[S, Array[A]], Int) -> Lens[S, A]
 pub fn[S, A] field(String, (S) -> A, (S, A) -> S) -> Lens[S, A]
 
 pub fn[S, A : Eq] field_is_dirty(Lens[S, A], S, S) -> Bool
+
+pub fn[G, V] group_validator((G, V) -> GroupValidationResult) -> GroupValidator[G, V]
+
+pub fn[G, V] group_validator_value((G) -> GroupValidationResult) -> GroupValidator[G, V]
 
 pub fn[S] identity() -> Lens[S, S]
 
@@ -36,6 +42,10 @@ pub enum AsyncCause {
   BlurAsync
 } derive(Eq, @debug.Debug)
 
+pub struct AsyncGroupValidator[G, V] {
+  validate : (G, V, Clock, (GroupValidationResult) -> Unit) -> Unit
+}
+
 pub struct AsyncValidator[A, V] {
   validate : (A, V, Clock, (Array[String]) -> Unit) -> Unit
 }
@@ -45,6 +55,12 @@ pub enum ChangeKind {
   Meta
 } derive(Eq, @debug.Debug)
 pub fn ChangeKind::value_and_meta() -> Array[Self]
+
+pub struct ChangeListener {
+  cb : (Key) -> Unit
+  debounce_ms : Int
+  mut timer : Int?
+}
 
 pub struct Clock {
   now : () -> Int
@@ -92,6 +108,7 @@ pub fn[V, A : Eq] FieldApi::is_dirty(Self[V, A]) -> Bool
 pub fn[V, A] FieldApi::key(Self[V, A]) -> Key
 pub fn[V, A] FieldApi::meta(Self[V, A]) -> FieldMetaState
 pub fn[V, A : Eq] FieldApi::mount(Self[V, A]) -> Unit
+pub fn[V, A] FieldApi::reset(Self[V, A]) -> Unit
 pub fn[V, A] FieldApi::run_validation(Self[V, A], ValidationCause) -> Unit
 pub fn[V, A] FieldApi::run_validation_against(Self[V, A], ValidationCause, V) -> Unit
 pub fn[V, A] FieldApi::schedule_async_validation(Self[V, A], AsyncCause) -> Unit
@@ -139,6 +156,10 @@ pub struct FormApi[V] {
   mut submit_error : String?
   submit_validators : Map[Key, (V) -> Unit]
   dep_watches : Map[Key, Map[Key, () -> Unit]]
+  group_regs : Map[Key, GroupReg[V]]
+  mut next_group_token : Int
+  on_change_listener : ChangeListener?
+  on_change_group_listener : ChangeListener?
 }
 pub fn[V] FormApi::batch(Self[V], () -> Unit) -> Unit
 pub fn[V] FormApi::blur_field(Self[V], Key) -> Unit
@@ -149,6 +170,7 @@ pub fn[V] FormApi::delete_field(Self[V], Key) -> Unit
 pub fn[V, A] FormApi::field(Self[V], Lens[V, A], default? : A, on_change? : (A) -> Unit, on_blur? : () -> Unit, on_mount? : () -> Unit, on_unmount? : () -> Unit, on_mount_validate? : Validator[A, V], on_change_validate? : Validator[A, V], on_blur_validate? : Validator[A, V], on_submit_validate? : Validator[A, V], on_change_async_validate? : AsyncValidator[A, V], on_blur_async_validate? : AsyncValidator[A, V], async_debounce_ms? : Int, on_change_async_debounce_ms? : Int, on_blur_async_debounce_ms? : Int, listen_to? : Array[Key]) -> FieldApi[V, A]
 pub fn[V] FormApi::field_meta(Self[V], Key) -> FieldMetaState
 pub fn[V, A] FormApi::get_value(Self[V], Lens[V, A]) -> A
+pub fn[V, G] FormApi::group(Self[V], Lens[V, G], on_mount? : (G) -> Unit, on_change? : (G) -> Unit, on_unmount? : (G) -> Unit, on_mount_validate? : GroupValidator[G, V], on_change_validate? : GroupValidator[G, V], on_submit_validate? : GroupValidator[G, V], on_change_async_validate? : AsyncGroupValidator[G, V], on_change_async_debounce_ms? : Int) -> FormGroupApi[V, G]
 pub fn[V] FormApi::handle_submit(Self[V], submit_options? : SubmitOptions[V]) -> Unit
 pub fn[V] FormApi::has_field_meta(Self[V], Key) -> Bool
 pub fn[V, A] FormApi::insert_value(Self[V], Lens[V, Array[A]], Int, A, dont_update_meta? : Bool) -> Unit
@@ -161,7 +183,7 @@ pub fn[V] FormApi::is_submitting(Self[V]) -> Bool
 pub fn[V] FormApi::is_touched(Self[V]) -> Bool
 pub fn[V] FormApi::is_valid_fields(Self[V]) -> Bool
 pub fn[V] FormApi::is_validating(Self[V]) -> Bool
-pub fn[V] FormApi::make(V, default_state? : FormDefaultState[V], on_field_unmount? : (Key) -> Unit) -> Self[V]
+pub fn[V] FormApi::make(V, default_state? : FormDefaultState[V], on_field_unmount? : (Key) -> Unit, on_change? : (Key) -> Unit, on_change_debounce_ms? : Int, on_change_group? : (Key) -> Unit, on_change_group_debounce_ms? : Int) -> Self[V]
 pub fn[V] FormApi::meta_store(Self[V]) -> MetaStore
 pub fn[V, A] FormApi::move_value(Self[V], Lens[V, Array[A]], Int, Int, dont_update_meta? : Bool) -> Unit
 pub fn[V, A] FormApi::push_value(Self[V], Lens[V, Array[A]], A, dont_update_meta? : Bool) -> Unit
@@ -189,6 +211,75 @@ pub struct FormDefaultState[V] {
 }
 pub fn[V] FormDefaultState::make() -> Self[V]
 
+pub struct FormGroupApi[V, G] {
+  form : FormApi[V]
+  lens : Lens[V, G]
+  on_mount_l : ((G) -> Unit)?
+  on_change_l : ((G) -> Unit)?
+  on_unmount_l : ((G) -> Unit)?
+  validation : GroupValidationSpec[G, V]
+  mut mounted : Bool
+  mut mount_token : Int?
+  mut error_map : ErrorMap
+  mut submission_attempts : Int
+  mut is_touched : Bool
+  mut is_validating : Bool
+  mut async_seq : Int
+  mut async_timer : Int?
+  mut owned_field_errors : Array[(ValidationCause, Key)]
+}
+pub fn[V, G] FormGroupApi::abort_async_validation(Self[V, G]) -> Unit
+pub fn[V, G] FormGroupApi::can_submit(Self[V, G]) -> Bool
+pub fn[V, G] FormGroupApi::error_for_cause(Self[V, G], ValidationCause) -> Array[String]?
+pub fn[V, G] FormGroupApi::errors(Self[V, G]) -> Array[String]
+pub fn[V, G] FormGroupApi::handle_submit(Self[V, G], on_group_submit? : (G, String?) -> Unit, on_group_submit_invalid? : () -> Unit, meta? : String) -> Unit
+pub fn[V, G] FormGroupApi::is_fields_valid(Self[V, G]) -> Bool
+pub fn[V, G] FormGroupApi::is_group_valid(Self[V, G]) -> Bool
+pub fn[V, G] FormGroupApi::is_touched(Self[V, G]) -> Bool
+pub fn[V, G] FormGroupApi::is_valid(Self[V, G]) -> Bool
+pub fn[V, G] FormGroupApi::is_validating(Self[V, G]) -> Bool
+pub fn[V, G] FormGroupApi::key(Self[V, G]) -> Key
+pub fn[V, G] FormGroupApi::mount(Self[V, G]) -> Unit
+pub fn[V, G] FormGroupApi::schedule_async_validation(Self[V, G]) -> Unit
+pub fn[V, G] FormGroupApi::set_value(Self[V, G], G) -> Unit
+pub fn[V, G] FormGroupApi::submission_attempts(Self[V, G]) -> Int
+pub fn[V, G] FormGroupApi::unmount(Self[V, G]) -> Unit
+pub fn[V, G] FormGroupApi::validate(Self[V, G], ValidationCause) -> Unit
+pub fn[V, G] FormGroupApi::value(Self[V, G]) -> G
+
+pub struct GroupFieldError {
+  key : Key
+  errors : Array[String]
+} derive(Eq, @debug.Debug)
+
+pub(all) struct GroupReg[V] {
+  token : Int
+  dispatch_change : (V) -> Unit
+  reset : () -> Unit
+}
+
+pub struct GroupValidationResult {
+  group_errors : Array[String]
+  field_errors : Array[GroupFieldError]
+} derive(Eq, @debug.Debug)
+pub fn GroupValidationResult::fields(Array[(Key, String)]) -> Self
+pub fn GroupValidationResult::group_and_fields(String, Array[(Key, String)]) -> Self
+pub fn GroupValidationResult::group_error(String) -> Self
+pub fn GroupValidationResult::valid() -> Self
+
+pub struct GroupValidationSpec[G, V] {
+  on_mount : GroupValidator[G, V]?
+  on_change : GroupValidator[G, V]?
+  on_submit : GroupValidator[G, V]?
+  on_change_async : AsyncGroupValidator[G, V]?
+  on_change_async_debounce_ms : Int
+}
+pub fn[G, V] GroupValidationSpec::make() -> Self[G, V]
+
+pub struct GroupValidator[G, V] {
+  validate : (G, V) -> GroupValidationResult
+}
+
 pub struct Key {
   segs : Array[Seg]
 } derive(Compare, Eq, Hash, @debug.Debug)
@@ -208,10 +299,12 @@ pub struct Lens[S, A] {
   key : Key
   get : (S) -> A
   set : (S, A) -> S
+  try_get : (S) -> A?
 }
 pub fn[S, M, A] Lens::compose(Self[S, M], Self[M, A]) -> Self[S, A]
 pub fn[S, A] Lens::get(Self[S, A], S) -> A
 pub fn[S, A] Lens::set(Self[S, A], S, A) -> S
+pub fn[S, A] Lens::try_get(Self[S, A], S) -> A?
 
 pub struct MetaStore {
   mut entries : Map[Key, FieldMetaState]

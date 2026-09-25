@@ -223,6 +223,70 @@ test "doc: debounced async validation on the virtual clock" {
 }
 ```
 
+## Field groups: group validation, distribution, group submit
+
+```mbt check
+///|
+struct Wiz {
+  step1 : WizStep
+  step2 : WizStep
+} derive(Eq, Debug)
+
+///|
+struct WizStep {
+  title : String
+} derive(Eq, Debug)
+
+///|
+fn wiz_step1_l() -> Lens[Wiz, WizStep] {
+  field("step1", w => w.step1, (w, s) => { ..w, step1: s, })
+}
+
+///|
+fn wiz_title_l() -> Lens[WizStep, String] {
+  field("title", s => s.title, (_s, t) => { title: t, })
+}
+
+///|
+test "doc: group validator distributes field errors; group submit is form-safe" {
+  let form = FormApi::make({ step1: { title: "", }, step2: { title: "ok", }, })
+  let step1 = form.group(
+    wiz_step1_l(),
+    on_submit_validate=group_validator_value(g => {
+      if g.title == "" {
+        GroupValidationResult::group_and_fields("Step incomplete", [
+          (Key::field("title"), "Title is required"),
+        ])
+      } else {
+        GroupValidationResult::valid()
+      }
+    }),
+  )
+  let title = form.field(wiz_step1_l().compose(wiz_title_l()))
+  step1.mount()
+  title.mount()
+  let submitted : SubmitCounter = { n: 0, }
+  step1.handle_submit(
+    on_group_submit=(_v, _meta) => submitted.n = submitted.n + 1,
+    on_group_submit_invalid=() => (),
+  )
+  inspect(submitted.n, content="0") // blocked
+  inspect(step1.errors().length(), content="1") // group-level error
+  inspect(
+    title.meta().errors()[0],
+    content="Title is required", // distributed to the child field
+  )
+  inspect(form.submission_attempts(), content="0") // the form never submitted
+  title.set_value("done")
+  step1.handle_submit(
+    on_group_submit=(_v, _meta) => submitted.n = submitted.n + 1,
+    on_group_submit_invalid=() => (),
+  )
+  inspect(submitted.n, content="1") // re-validated and passed
+  inspect(step1.errors().length(), content="0")
+}
+```
+
 ## Submit orchestration
 
 ```mbt check

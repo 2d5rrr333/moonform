@@ -10,19 +10,35 @@ pub fn[V] contains(String, message? : String) -> @core.Validator[String, V]
 
 pub fn[A, V] custom((A) -> Array[String]) -> @core.Validator[A, V]
 
+pub fn[V] email(message? : String) -> @core.Validator[String, V]
+
+pub fn[A : Eq, V] equals(A, message? : String) -> @core.Validator[A, V]
+
+pub fn[V] max_int(Int, message? : String) -> @core.Validator[Int, V]
+
 pub fn[V] max_length(Int, message? : String) -> @core.Validator[String, V]
 
 pub fn[V] max_value(Double, message? : String) -> @core.Validator[Double, V]
 
+pub fn[V] min_int(Int, message? : String) -> @core.Validator[Int, V]
+
 pub fn[V] min_length(Int, message? : String) -> @core.Validator[String, V]
 
 pub fn[V] min_value(Double, message? : String) -> @core.Validator[Double, V]
+
+pub fn[V] must_be_true(message? : String) -> @core.Validator[Bool, V]
+
+pub fn[V] non_blank(message? : String) -> @core.Validator[String, V]
+
+pub fn[V] numeric(message? : String) -> @core.Validator[String, V]
 
 pub fn[V] required(message? : String) -> @core.Validator[String, V]
 
 pub fn[V] required_array(message? : String) -> @core.Validator[Array[String], V]
 
 pub fn[V] starts_with(String, message? : String) -> @core.Validator[String, V]
+
+pub fn[V] url(message? : String) -> @core.Validator[String, V]
 
 // Errors
 

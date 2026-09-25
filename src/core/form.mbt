@@ -66,6 +66,14 @@ pub struct FormApi[V] {
   /// triggers re-validation of the fields registered under K, keyed by the
   /// listening field's key (unmount removes its watches wholesale).
   dep_watches : Map[Key, Map[Key, () -> Unit]]
+  /// Mounted groups (upstream FormGroupApi), keyed by the group's key —
+  /// the prefix of every child field key.
+  group_regs : Map[Key, GroupReg[V]]
+  mut next_group_token : Int
+  /// Form-level change listeners (upstream form listeners onChange /
+  /// onChangeGroup) with independent debounce windows.
+  on_change_listener : ChangeListener?
+  on_change_group_listener : ChangeListener?
 }
 
 ///|
@@ -73,6 +81,10 @@ pub fn[V] FormApi::make(
   default_values : V,
   default_state? : FormDefaultState[V],
   on_field_unmount? : (Key) -> Unit,
+  on_change? : (Key) -> Unit,
+  on_change_debounce_ms? : Int,
+  on_change_group? : (Key) -> Unit,
+  on_change_group_debounce_ms? : Int,
 ) -> FormApi[V] {
   let ds = default_state.unwrap_or(FormDefaultState::make())
   {
@@ -93,6 +105,18 @@ pub fn[V] FormApi::make(
     submit_error: None,
     submit_validators: Map([]),
     dep_watches: Map([]),
+    group_regs: Map([]),
+    next_group_token: 1,
+    on_change_listener: match on_change {
+      Some(cb) =>
+        Some(ChangeListener::make(cb, on_change_debounce_ms.unwrap_or(0)))
+      None => None
+    },
+    on_change_group_listener: match on_change_group {
+      Some(cb) =>
+        Some(ChangeListener::make(cb, on_change_group_debounce_ms.unwrap_or(0)))
+      None => None
+    },
   }
 }
 
@@ -179,6 +203,14 @@ pub fn[V, A] FormApi::set_value(
       None => ()
     }
   }
+  // mounted groups under the changed key re-validate + run their onChange
+  // listeners; the form-level onChangeGroup listener fires once per matching
+  // group (upstream form listeners.onChangeGroup), then the form-level
+  // onChange listener (upstream listeners.onChange)
+  for gk in self.dispatch_groups(lens.key) {
+    self.fire_on_change_group(gk)
+  }
+  self.fire_on_change(lens.key)
 }
 
 // -- derived state -----------------------------------------------------------
@@ -359,6 +391,11 @@ pub fn[V] FormApi::reset(
   self.is_submitted = ds.is_submitted
   self.is_submit_successful = ds.is_submit_successful
   self.is_validating = ds.is_validating
+  // mounted groups clear their own submission/error state (child field meta
+  // was already reset above)
+  for _k, reg in self.group_regs {
+    (reg.reset)()
+  }
   self.subs.notify_all()
 }
 

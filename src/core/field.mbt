@@ -427,3 +427,15 @@ pub fn[V, A] FieldApi::handle_blur(self : FieldApi[V, A]) -> Unit {
 pub fn[V, A] FieldApi::meta(self : FieldApi[V, A]) -> FieldMetaState {
   self.form.meta.get_or_default(self.lens.key)
 }
+
+///|
+/// Reset the field (upstream `resetField`): the value returns to its
+/// effective default (the field's own `default` if declared, else the form
+/// defaults) and the field's meta entry resets to the default meta —
+/// interaction flags and errors cleared.
+pub fn[V, A] FieldApi::reset(self : FieldApi[V, A]) -> Unit {
+  self.form.values = (self.lens.set)(self.form.values, self.default_value())
+  self.form.meta.set(self.lens.key, FieldMetaState::default_meta())
+  self.form.subs.notify(self.lens.key, Value)
+  self.form.subs.notify(self.lens.key, Meta)
+}
