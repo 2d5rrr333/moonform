@@ -138,9 +138,11 @@ step1.handle_submit(
 
 A group validator can also be a compiled moonschema schema (errors
 distribute to child fields by their JSON-Pointer paths relative to the
-group — see the `/schema` package):
+group — see the `/schema` package). Note the group value type needs
+`derive(Eq, ToJson, Debug)` — schema validation runs over Json values:
 
 ```moonbit
+// struct Step { name : String } derive(Eq, ToJson, Debug)  ← ToJson required
 let step_schema = @builder.object({ "name": @builder.string().min_len(2) }).compile()...
 let step1 = form.group(
   step1_l(),

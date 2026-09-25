@@ -1,0 +1,10 @@
+import {
+  "2d5rrr333/moonform/core",
+  "2d5rrr333/moonform/rules",
+  "2d5rrr333/moonform/schema" @formSchema,
+  "2d5rrr333/moonform/vendor/moonschema/builder",
+}
+
+supported_targets = "js"
+
+pkgtype(kind: "executable")

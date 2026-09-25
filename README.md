@@ -129,9 +129,11 @@ step1.handle_submit(
 ```
 
 组校验器也可以直接用 moonschema 编译的 schema（错误按 JSON-Pointer 组内相对路径
-分发给子字段，见 `/schema` 包）：
+分发给子字段，见 `/schema` 包）。注意组值类型需 `derive(Eq, ToJson, Debug)`——
+schema 校验经 Json 值进行：
 
 ```moonbit
+// struct Step { name : String } derive(Eq, ToJson, Debug)  ← ToJson 必需
 let step_schema = @builder.object({ "name": @builder.string().min_len(2) }).compile()...
 let step1 = form.group(
   step1_l(),
