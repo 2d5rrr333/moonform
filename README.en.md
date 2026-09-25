@@ -1,4 +1,4 @@
-# moonform
+﻿# moonform
 
 Native headless form state library for MoonBit. **Architecture inspired by [TanStack Form](https://github.com/TanStack/form)** (MIT).
 
@@ -42,6 +42,7 @@ self-claimed).
 
 - **Headless form state machine** — field values, dirty/touched, error derivation, subscriptions, submit orchestration. Behavior-parity with `@tanstack/form-core@1.33.5` via translated upstream tests ([upstream/PARITY.md](upstream/PARITY.md))
 - **Structured field accessors (lens)** — replaces dot-path strings with `(key, get, set)` triples: compile-time safe, rename-safe; array operations (push/insert/remove/swap/move/replace) with meta migration
+- **Field groups (FormGroup)** — lens-prefix grouping: group-level validators (group errors + distribution to child fields, deferred for not-yet-mounted fields), group-scoped submission (never touches the form's submit state), form-level onChange/onChangeGroup listeners with independent debounce
 - **Resolver protocol** — pluggable validators: built-in lightweight rules + moonschema (zod-style JSON Schema) adapter
 - **Adapter protocol** — the core never renders; the tiye/react adapter bridges via `use_sync_external_store`
 - **Multi-target** — core/rules are dependency-free and compile to js/wasm/native; the same validation definition runs on server and client (isomorphic)
@@ -51,7 +52,7 @@ self-claimed).
 
 | Package | Deps | Notes |
 |---|---|---|
-| `core` | none | state machine, Key/Lens, MetaStore, subscriptions, Clock, Validator, submit |
+| `core` | none | state machine, Key/Lens, MetaStore, subscriptions, Clock, Validator, FormGroup, submit |
 | `rules` | none | required/min/max/length/pattern/contains/equals/non_blank/numeric/must_be_true/custom closures |
 | `schema` | vendored moonschema | moonschema adapter (JSON-Pointer error paths → field slots) |
 | `react` | tiye/react | FieldBridge + use_field (js target) |
@@ -104,6 +105,30 @@ field.set_value("x")
 clock.run_all()   // debounce window + validation, one tick
 ```
 
+Field groups (group validation + error distribution + group submit):
+
+```moonbit
+// fn step1_l() -> Lens[Form, Step] — accessor defined as above
+let step1 = form.group(
+  step1_l(),
+  on_submit_validate=@core.group_validator_value(g => {
+    if g.name == "" {
+      @core.GroupValidationResult::group_and_fields(
+        "Step incomplete",
+        [(@core.Key::field("name"), "Name is required")],
+      )
+    } else {
+      @core.GroupValidationResult::valid()
+    }
+  }),
+)
+step1.mount()
+step1.handle_submit(
+  on_group_submit=(value, _meta) => submit_step1(value),  // form submit state untouched
+  on_group_submit_invalid=() => show_group_errors(),
+)
+```
+
 React (tiye/react):
 
 ```moonbit
@@ -121,8 +146,8 @@ More in [examples/README](src/examples/README.md).
 ## Tests & acceptance
 
 ```bash
-moon test --target js      # 210 tests (incl. upstream translations + doc-tests)
-moon test --target wasm    # 205 tests
+moon test --target js      # 259 tests (incl. upstream translations + doc-tests)
+moon test --target wasm    # 254 tests
 moon test --target native  # verified in CI (five green GitHub Actions jobs)
 moon run src/examples/login --target js   # example verification
 ```
@@ -130,11 +155,12 @@ moon run src/examples/login --target js   # example verification
 Three-target `moon check` with zero warnings; CI covers check×3 targets +
 test×3 targets + the example run ([workflow](.github/workflows/ci.yml)).
 
-Upstream parity: **143 translated tests** cover the behavior semantics of the
-form-core@1.33.5 core 291-case suite; exemptions (utils dot-path machinery /
-FormGroup / mergeForm / type-level tests) and deliberate deviations (value
-semantics / virtual clock / stable-ID bookkeeping, 7 items) are recorded case
-by case in [upstream/PARITY.md](upstream/PARITY.md).
+Upstream parity: **185 translated tests** cover the behavior semantics of the
+form-core@1.33.5 342-case suite (FormGroup's 31 and FieldGroup's 20 included);
+exemptions (utils dot-path machinery / mergeForm / type-level tests, etc.)
+and deliberate deviations (value semantics / virtual clock / FieldGroup
+subsumed by lens composition, 9 items) are recorded case by case in
+[upstream/PARITY.md](upstream/PARITY.md).
 
 ## Credits
 

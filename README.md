@@ -1,4 +1,4 @@
-# moonform
+﻿# moonform
 
 MoonBit 原生 headless 表单状态库。**Architecture inspired by [TanStack Form](https://github.com/TanStack/form)**（MIT）。
 
@@ -39,6 +39,7 @@ moon add 2d5rrr333/moonform/rules
 
 - **Headless 表单状态机**：字段值、dirty/touched、错误派生、按需订阅、提交编排——语义对标 `@tanstack/form-core@1.33.5`（上游测试集行为等价翻译，见 [upstream/PARITY.md](upstream/PARITY.md)）
 - **结构化字段访问器（lens）**：替代 dot-path 字符串——`(key, get, set)` 三元组组合子，编译期安全、重构改名不失配；数组字段操作（push/insert/remove/swap/move/replace）+ meta 迁移
+- **字段组（FormGroup）**：以 lens 为前缀的字段分组——组级校验器（组错误 + 错误分发到子字段，未挂载字段延迟浮现）、组内提交（不触碰表单提交态）、form 级 onChange/onChangeGroup 监听器（独立防抖）
 - **Resolver 协议**：校验器即插即用——内置轻量规则包（required/min/max/pattern/闭包）+ moonschema（zod-style JSON Schema）适配
 - **Adapter 协议**：核心不渲染；tiye/react 适配器经 `use_sync_external_store` 桥接
 - **跨目标**：core/rules 零第三方依赖，js/wasm/native 三目标可编译；同一校验定义服务端/前端复用（同构）
@@ -48,7 +49,7 @@ moon add 2d5rrr333/moonform/rules
 
 | 包 | 依赖 | 说明 |
 |---|---|---|
-| `core` | 零 | 状态机、Key/Lens、MetaStore、订阅、Clock、Validator、提交编排 |
+| `core` | 零 | 状态机、Key/Lens、MetaStore、订阅、Clock、Validator、FormGroup、提交编排 |
 | `rules` | 零 | required/min/max/length/pattern/contains/equals/non_blank/numeric/must_be_true/自定义闭包 |
 | `schema` | vendor moonschema | moonschema 适配（JSON-Pointer 错误路径 → 字段错误槽） |
 | `react` | tiye/react | FieldBridge + use_field（js 目标） |
@@ -101,6 +102,30 @@ field.set_value("x")
 clock.run_all()   // 防抖窗口 + 校验完成，一次推进
 ```
 
+字段组（组级校验 + 错误分发 + 组内提交）：
+
+```moonbit
+// fn step1_l() -> Lens[Form, Step] —— 访问器定义同上
+let step1 = form.group(
+  step1_l(),
+  on_submit_validate=@core.group_validator_value(g => {
+    if g.name == "" {
+      @core.GroupValidationResult::group_and_fields(
+        "Step incomplete",
+        [(@core.Key::field("name"), "Name is required")],
+      )
+    } else {
+      @core.GroupValidationResult::valid()
+    }
+  }),
+)
+step1.mount()
+step1.handle_submit(
+  on_group_submit=(value, _meta) => submit_step1(value),  // 表单提交态不受影响
+  on_group_submit_invalid=() => show_group_errors(),
+)
+```
+
 React（tiye/react）：
 
 ```moonbit
@@ -119,8 +144,8 @@ let state = @react.use_sync_external_store(
 ## 测试与验收
 
 ```bash
-moon test --target js      # 210 tests（含上游译文 + 文档测试）
-moon test --target wasm    # 205 tests
+moon test --target js      # 259 tests（含上游译文 + 文档测试）
+moon test --target wasm    # 254 tests
 moon test --target native  # CI 已验证（GitHub Actions 五作业全绿）
 moon run src/examples/login --target js   # 示例验收
 ```
@@ -128,9 +153,10 @@ moon run src/examples/login --target js   # 示例验收
 三目标 `moon check` 零警告；CI 覆盖 check×3 目标 + test×3 目标 + 示例运行
 （[workflow](.github/workflows/ci.yml)）。
 
-上游对账：**143 个译文测试**覆盖 form-core@1.33.5 核心 291 用例的行为语义；
-豁免清单（utils dot-path 机器/FormGroup/mergeForm/类型层测试）与有意偏离
-（值语义/虚拟时钟/稳定 ID 簿记等 7 项）逐条记录于
+上游对账：**185 个译文测试**覆盖 form-core@1.33.5 全部 342 个用例的行为语义
+（含 FormGroup 31 / FieldGroup 20）；豁免清单（utils dot-path 机器/
+mergeForm/类型层测试等）与有意偏离（值语义/虚拟时钟/lens 组合吞并
+FieldGroup 等 9 项）逐条记录于
 [upstream/PARITY.md](upstream/PARITY.md)。
 
 ## 致谢

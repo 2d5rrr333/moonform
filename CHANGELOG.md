@@ -1,9 +1,45 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.2.0] - 2026-09-25
+
+### Added
+
+- **`FormGroupApi`** (core): group-scoped validation and submission over a
+  lens prefix (upstream form-core@1.33.5 FormGroupApi):
+  - Group validator protocol (`GroupValidator` / `AsyncGroupValidator`) with
+    structured `GroupValidationResult`: group-level errors plus field errors
+    distributed to child fields — including fields that are not mounted yet
+    (their errors surface on mount)
+  - Group submission (`handle_submit`) that never touches the parent form's
+    submit state (onSubmit handler, submissionAttempts, isSubmitting);
+    field errors short-circuit the group's own onSubmit validation; submit
+    `meta` flows through to the callback
+  - Derived group state: `errors` / `error_for_cause`, `is_fields_valid` /
+    `is_group_valid` / `is_valid`, `can_submit`, group-scoped
+    `submission_attempts`, `is_validating`; async onChange validation with
+    debounce and race-abort on unmount
+  - Group listeners (onMount/onChange/onUnmount receive the group value)
+- **Form-level change listeners** (upstream form `listeners.onChange` /
+  `onChangeGroup`): `FormApi::make(on_change=…, on_change_group=…)` with
+  independent debounce windows driven by the form's Clock
+- **`FieldApi::reset`** (upstream `resetField`): value back to the effective
+  default, meta reset to default
+- `moon info` interface files regenerated (rules .mbti had drifted stale)
+
+### Tests
+
+- Upstream parity grows from 143 to **185 translated tests**: 26 from
+  FormGroupApi.spec.ts, 16 FieldGroupApi.spec.ts cases as lens-composition
+  equivalence tests (the string-remapping machine is subsumed by accessor
+  composition — deviation D-P8); exemptions and deviations re-ledgered in
+  upstream/PARITY.md
+- 259 tests on js, 254 on wasm, native check clean; three-target
+  `moon check --deny-warn` zero warnings
 
 ## [0.1.1] - 2026-09-19
 
