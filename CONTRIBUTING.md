@@ -39,13 +39,14 @@ node tools/headless-verify.cjs               # 浏览器检查全过（需先构
 - **行为语义**对标 TanStack form-core@1.33.5：修复/新增行为前先查
   [upstream/PARITY.md](upstream/PARITY.md) 的译文对账与偏离清单（D-P1~D-P9）；
   语义偏离必须有理由并记录在案
-- **测试先行**：历史上 7 个真实 bug 全部由测试暴露；新行为请附可失败
+- **测试先行**：六轮审计累计 32 个真实 bug，全部由测试/示例/fuzz 暴露
+  （确定性回归 + 结构/异步两条随机化 fuzz 常驻）；新行为请附可失败
   的回归测试（core 的测试在 `src/core/*_wbtest.mbt`，白盒）
 - **文档即测试**：core/rules/schema/react 各有 `README.mbt.md` doc 测试；
   主 README 的快速开始示例由 `src/readme-verify` 对发布包持续验证——
   改 README 示例必须同步改验证器
 - **生成物不手改**：`*.mbti` 由 `moon info` 再生、
-  `profile_lenses.generated.mbt` 由 lens-gen CLI 再生（CI 均有漂移守卫）
+  `lenses.generated.mbt` 由 lens-gen CLI 再生（CI 均有漂移守卫）
 - **提交信息**：conventional commits（feat/fix/perf/docs/ci/chore/test）
 - **行尾**：仓库统一 LF（`.gitattributes` 已钉）；Windows 下批量改文件
   注意别写入 BOM

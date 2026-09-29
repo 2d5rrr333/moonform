@@ -19,7 +19,7 @@ moon add 2d5rrr333/moonform/rules
 ```toml
 # moon.mod 中出现（以当前最新版本为准）：
 import {
-  "2d5rrr333/moonform@0.8.2",
+  "2d5rrr333/moonform@0.9.3",
 }
 ```
 

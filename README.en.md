@@ -19,7 +19,7 @@ moon add 2d5rrr333/moonform/rules
 ```toml
 # your moon.mod ends up with (latest version may differ):
 import {
-  "2d5rrr333/moonform@0.8.2",
+  "2d5rrr333/moonform@0.9.3",
 }
 ```
 

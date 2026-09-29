@@ -30,10 +30,12 @@ form(14) + array_ops(14) + array_meta(9) + submit(9) + subscribe(20) + field(8) 
 parity_small(7) + validation(9) + validation_async(9) + group(29) +
 fieldgroup_equiv(15) + linkage(5) + store(9，MetaStore 前缀查询/重键机制作为
 utils dot-path 机器的设计替代覆盖)。每个文件的 `test "..."` 数可用
-`Select-String '^\s*test'` 直接复核。另有**非译文的自有测试 63**：基础设施
-（key 19 / lens 8 / equal 5）、回归守护（stale_index 5 / group_edges 4）、
-压力与边界（storm 5 / extreme 5 / scale 3）、core 文档测试（9）——
-`moon test -p core` 实测 220 = 157 + 63 吻合。全套执行计数见 README（随版本更新）。
+`Select-String '^\s*test'` 直接复核。另有**非译文的自有测试 98**：基础设施
+（key 19 / lens 8 / equal 5）；回归守护（stale_index 5 / group_edges 4 /
+array_ops_guards 10 / reentrancy 8 / subscription_edges 7 / group_lifecycle 5 /
+submit 身份守卫 3）；压力与随机化（storm 5 / extreme 5 / scale 3 / 结构 fuzz 1 /
+异步 fuzz 1——两条 fuzz 各自内部驱动多种子批量步骤）；core 文档测试（9）。
+`moon test -p core` 实测 255 = 157 + 98 吻合。全套执行计数见 README（随版本更新）。
 
 
 ## 豁免清单（含理由）
