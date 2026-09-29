@@ -258,6 +258,11 @@ pub fn[V, G] FormGroupApi::mount(self : FormGroupApi[V, G]) -> Unit {
     return
   }
   self.mounted = true
+  // a mount is a fresh lifecycle (upstream: every mount creates a new
+  // FormGroupApi) — a remounted instance does not inherit the previous
+  // life's submission count or touched flag
+  self.submission_attempts = 0
+  self.is_touched = false
   let token = self.form.next_group_token
   self.form.next_group_token = token + 1
   let dispatch_change = (values : V) => {
@@ -670,6 +675,14 @@ fn[V, G] FormGroupApi::set_validating(
 ) -> Unit {
   if self.is_validating != b {
     self.is_validating = b
+    // keep the form-level in-flight count in step (blocks form submission
+    // while any group async validation runs — upstream's single global
+    // isValidating)
+    if b {
+      self.form.validating_groups = self.form.validating_groups + 1
+    } else {
+      self.form.validating_groups = self.form.validating_groups - 1
+    }
     self.form.subs.notify(self.lens.key, Meta)
   }
 }

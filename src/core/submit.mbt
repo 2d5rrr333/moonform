@@ -92,6 +92,12 @@ pub fn[V] FormApi::can_submit(self : FormApi[V]) -> Bool {
 
 ///|
 fn[V] FormApi::is_validating_any(self : FormApi[V]) -> Bool {
+  // in-flight async GROUP validation blocks submission the same way field
+  // validation does (upstream tracks one form-level isValidating counter
+  // across every async validator)
+  if self.validating_groups > 0 {
+    return true
+  }
   for _k, m in self.meta.entries {
     if m.is_validating {
       return true

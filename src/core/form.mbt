@@ -63,6 +63,10 @@ pub struct FormApi[V] {
   mut clock : Clock?
   /// Form-level submit error (upstream form errorMap.onSubmit).
   mut submit_error : String?
+  /// In-flight async GROUP validation count (upstream tracks form-level
+  /// isValidating across all async validators, groups included; fields
+  /// record theirs in meta). Maintained by FormGroupApi::set_validating.
+  mut validating_groups : Int
   /// Per-field onSubmit validator dispatch (mounted fields only).
   submit_validators : Map[Key, (V) -> Unit]
   /// Dependency watches (upstream onChangeListenTo): value-change of key K
@@ -106,6 +110,7 @@ pub fn[V] FormApi::make(
     on_field_unmount,
     clock: None,
     submit_error: None,
+    validating_groups: 0,
     submit_validators: Map([]),
     dep_watches: Map([]),
     group_regs: Map([]),

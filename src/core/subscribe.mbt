@@ -129,7 +129,8 @@ fn sub_matches(sub : Sub, key : Key, kind : ChangeKind) -> Bool {
 /// (themselves or others) mid-notify: a snapshot of the subscriber list is
 /// iterated and each subscriber is re-checked for liveness after every
 /// callback, so removals take effect immediately without breaking the
-/// in-flight dispatch.
+/// in-flight dispatch. Subscriptions ADDED mid-notify are outside the
+/// snapshot: they receive no in-flight event and start with the next one.
 fn Subscriptions::notify(
   self : Subscriptions,
   key : Key,
@@ -166,7 +167,9 @@ fn Subscriptions::notify_all(self : Subscriptions) -> Unit {
 ///|
 /// Run `f` with notifications coalesced: each subscriber fires at most once
 /// at the end of the outermost batch. Batches nest. Mid-flush unsubscribes
-/// are honored (see `notify`).
+/// are honored (see `notify`); writes performed INSIDE a flush callback are
+/// outside the batch (depth is already zero) and notify immediately, not
+/// coalesced — documented semantics, not a leak.
 pub fn Subscriptions::batch(self : Subscriptions, f : () -> Unit) -> Unit {
   self.batch_depth = self.batch_depth + 1
   f()

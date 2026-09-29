@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.6] - 2026-09-29
+
+### Fixed
+
+Closing out the 0.8.5 audit's secondary findings:
+
+- **In-flight async GROUP validation did not gate form submission** (the
+  field/group asymmetry): `can_submit` only saw field-level
+  `is_validating` meta. The form now carries an in-flight group-async
+  counter (maintained by `FormGroupApi::set_validating`, aborted on
+  unmount/reset), and `is_validating_any` consults it — matching
+  upstream's single form-level isValidating across every async validator
+- **A remounted group inherited its previous life's state**:
+  `submission_attempts` and `is_touched` survived mount→unmount→mount on
+  the same handle, skewing `can_submit`'s never-touched branch. A mount
+  is now a fresh lifecycle (upstream: every mount creates a new
+  FormGroupApi)
+
+### Added
+
+- Subscription blind-spot tests (the 0.8.5 audit's coverage list):
+  mid-notify unsubscribes on the `notify_all` path (reset); mid-flush
+  unsubscribes in `batch`; mixed `notify` + `notify_all` batch pending
+  (one fire per subscriber); writes inside a flush callback notify
+  immediately (semantics now documented on `batch`); subscriptions added
+  mid-notify receive no in-flight event (documented on `notify`);
+  prefix-path liveness (`subscribe_under` unsubscribed mid-notify);
+  self-unsubscribing subscribers firing exactly once
+- Group dispatch snapshot tests: a group self-unmounting mid-dispatch
+  leaves siblings dispatched; a group mounted mid-dispatch receives no
+  in-flight event (next event reaches it)
+- First debounced group-async test (existing group async tests all ran
+  debounce 0): re-triggers inside the window reschedule — one run, one
+  application, exact validating transitions
+
+### Tests
+
+- 350 tests on js, 326 on wasm (+12)
+
 ## [0.8.5] - 2026-09-29
 
 ### Fixed

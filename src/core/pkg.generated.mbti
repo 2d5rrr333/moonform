@@ -168,6 +168,7 @@ pub struct FormApi[V] {
   on_field_unmount : ((Key) -> Unit)?
   mut clock : Clock?
   mut submit_error : String?
+  mut validating_groups : Int
   submit_validators : Map[Key, (V) -> Unit]
   dep_watches : Map[Key, Map[Key, () -> Unit]]
   group_regs : Map[Key, GroupReg[V]]
