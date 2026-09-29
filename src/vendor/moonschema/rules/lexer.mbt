@@ -38,7 +38,15 @@ fn tokenize(src : String) -> Array[Token] raise ExprError {
           i += 1
         }
       }
-      let text = src[start:i].to_owned()
+      // 修复（moonform vendor）：start/i 是码点下标，而 String 切片按
+      // UTF-16 偏移——前置增补平面字符曾使提取错位；改从码点数组拼接
+      let b = StringBuilder()
+      let mut j = start
+      while j < i {
+        b.write_char(chars[j])
+        j += 1
+      }
+      let text = b.to_string()
       let parsed : Double? = Some(@string.parse_double(text)) catch {
         _ => None
       }
@@ -102,7 +110,15 @@ fn tokenize(src : String) -> Array[Token] raise ExprError {
           break
         }
       }
-      toks.push(TIdent(src[start:i].to_owned()))
+      // 修复（moonform vendor）：同数字字面量——码点下标 × UTF-16 切片
+      // 混用会错位；改从码点数组拼接
+      let b = StringBuilder()
+      let mut j = start
+      while j < i {
+        b.write_char(chars[j])
+        j += 1
+      }
+      toks.push(TIdent(b.to_string()))
     } else {
       // 运算符：两字符优先
       let two = if i + 1 < n {

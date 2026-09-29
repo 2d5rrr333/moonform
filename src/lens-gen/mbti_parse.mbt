@@ -25,7 +25,7 @@ pub struct MbtiStruct {
 /// Parse the struct declarations out of one .mbti document.
 /// Comments/blank lines, the package header, imports, values, enums,
 /// traits, and method sections are skipped; only `pub struct` blocks are
-/// extracted.
+/// extracted (any `pub` visibility — plain, `pub(all)`, `pub(readonly)`).
 pub fn parse_mbti(content : String) -> Array[MbtiStruct] {
   let out : Array[MbtiStruct] = []
   let lines : Array[String] = []
@@ -35,7 +35,7 @@ pub fn parse_mbti(content : String) -> Array[MbtiStruct] {
   let mut i = 0
   while i < lines.length() {
     let line = lines[i].trim().to_owned()
-    if line.has_prefix("pub struct ") {
+    if is_struct_header(line) {
       let parsed = parse_struct(lines, i)
       out.push(parsed.0)
       i = parsed.1
@@ -47,16 +47,52 @@ pub fn parse_mbti(content : String) -> Array[MbtiStruct] {
 }
 
 ///|
+/// Is this line a pub struct header? `pub struct`, `pub(all) struct`,
+/// `pub(readonly) struct` — `moon info` emits the parenthesized forms for
+/// structs whose fields are constructible/updateable externally (the
+/// common shape for form value types).
+fn is_struct_header(line : String) -> Bool {
+  if line.has_prefix("pub struct ") {
+    return true
+  }
+  if line.has_prefix("pub(") {
+    // pub(all) struct Foo { / pub(readonly) struct Foo {
+    match find_char(line, ')') {
+      Some(idx) =>
+        substring(line, idx + 1, line.length()).trim().has_prefix("struct ")
+      None => false
+    }
+  } else {
+    false
+  }
+}
+
+///|
 fn parse_struct(lines : Array[String], start : Int) -> (MbtiStruct, Int) {
-  // header: pub struct Name[T, U] {  (also tolerant of no-space "{")
+  // header: pub[(...)] struct Name[T, U] {  (any pub visibility; the
+  // closing line may carry a derive clause — `} derive(Eq, Debug)`)
   let raw = lines[start].trim().to_owned()
-  let header = strip_suffix(strip_prefix(raw, "pub struct "), " {")
+  let after_pub = if raw.has_prefix("pub(") {
+    match find_char(raw, ')') {
+      Some(idx) => substring(raw, idx + 1, raw.length()).trim().to_owned()
+      None => raw
+    }
+  } else {
+    strip_prefix(raw, "pub ").trim().to_owned()
+  }
+  let header = strip_suffix(strip_prefix(after_pub, "struct "), "{")
+    .trim()
+    .to_owned()
   let np = split_name_params(header)
   let fields : Array[MbtiField] = []
   let mut i = start + 1
   while i < lines.length() {
     let line = lines[i].trim().to_owned()
-    if line == "}" {
+    // the struct ends at its closing brace — the line may continue with a
+    // derive clause (`} derive(Eq, @debug.Debug)`); treating any
+    // brace-leading line as the terminator keeps the parser from running
+    // past the struct and absorbing the NEXT struct's fields
+    if line.has_prefix("}") {
       return ({ name: np.0, type_params: np.1, fields, }, i + 1)
     }
     match split_field(line) {
@@ -92,14 +128,17 @@ fn split_name_params(header : String) -> (String, Array[String]) {
 
 ///|
 /// "name : Type" -> field record; None when the line is not a field.
+/// `mut` fields are ordinary fields to lenses (struct update syntax
+/// writes them the same way) — the modifier is stripped.
 fn split_field(line : String) -> MbtiField? {
   if line.length() == 0 {
     return None
   }
-  match find_char(line, ':') {
+  let body = strip_prefix(line, "mut ").trim().to_owned()
+  match find_char(body, ':') {
     Some(idx) => {
-      let name = substring(line, 0, idx).trim().to_owned()
-      let type_ref = substring(line, idx + 1, line.length()).trim().to_owned()
+      let name = substring(body, 0, idx).trim().to_owned()
+      let type_ref = substring(body, idx + 1, body.length()).trim().to_owned()
       if name.length() > 0 && type_ref.length() > 0 && is_ident(name) {
         Some({ name, type_ref, })
       } else {

@@ -545,14 +545,22 @@ fn[V] FormApi::unregister_field(self : FormApi[V], key : Key) -> Unit {
 /// Delete a field from the form (upstream `deleteField`): removes its
 /// registration and its meta entry plus every subfield's (keys under it).
 /// Values are left in place — typed form values have no "absent field"
-/// state, so value deletion does not apply (documented deviation).
+/// state, so value deletion does not apply (documented deviation). Every
+/// removed key notifies its subscribers (batched): exact-key subscribers
+/// on subfield keys must see the deletion, not just the prefix itself.
 pub fn[V] FormApi::delete_field(self : FormApi[V], key : Key) -> Unit {
   self.unregister_field(key)
+  let removed = self.meta.keys_under(key)
   self.meta.remove(key)
-  for k in self.meta.keys_under(key) {
+  for k in removed {
     self.meta.remove(k)
   }
-  self.subs.notify(key, Meta)
+  self.subs.batch(() => {
+    self.subs.notify(key, Meta)
+    for k in removed {
+      self.subs.notify(k, Meta)
+    }
+  })
 }
 
 ///|

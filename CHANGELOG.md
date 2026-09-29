@@ -5,6 +5,68 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1] - 2026-09-29
+
+### Fixed
+
+The fourth audit round — the lens generator, `delete_field`, and the
+vendored schema engine's adversarial-input surface:
+
+- **lens-gen: `} derive(...)` closing lines ended nothing** (severe): the
+  struct parser only recognized a bare `}` — every struct with a derive
+  clause (i.e. every struct `moon info` emits for derive(Eq) types) ran
+  past its end and absorbed the NEXT struct's fields, duplicating
+  accessors and dropping structs outright (reproducible on this repo's
+  own .mbti files). Any brace-leading line ends the struct now
+- **lens-gen: `pub(all)` structs silently skipped**: form value types
+  commonly use `pub(all)` for external construction — the header matcher
+  now accepts every pub visibility (`pub` / `pub(all)` / `pub(readonly)`)
+- **lens-gen: `mut` fields silently dropped**: the modifier is stripped —
+  mut fields get accessors like any other field
+- **lens-gen: accessor-name collisions generated uncompilable code**
+  (`FooBar.x` and `Foo.bar_x` both yield `foo_bar_x_l`): colliding fields
+  are skipped with a marker comment instead
+- **lens-gen CLI**: `-o` as the last token silently became the core
+  alias (garbage output, exit 0); unknown flags overwrote it likewise;
+  a missing input file died on a raw Node stack. Arguments are validated
+  (flags position-independent, `-o` requires a value, at most one alias),
+  unknown flags and missing files print a clear error with usage
+- **`delete_field` never notified the removed subtree**: only the
+  deleted key itself notified — exact-key subscribers on deeper keys
+  (e.g. `items.1.name` under a deleted `items.1`) stayed stale forever.
+  Every removed key now notifies (batched)
+- **vendored moonschema: `$ref` cycles and deeply nested schemas crashed
+  with a stack overflow** (`{"$ref": "#"}`, mutually-referencing defs,
+  600-deep documents): a shared depth counter caps compile and validate
+  recursion at 256 levels (compile raises `InvalidSchema`; validation
+  records an error) — NOTICE.md discloses
+- **vendored moonschema: percent-escaped non-ASCII `$ref` pointers never
+  resolved** (`#/properties/%E4%B8%AD%E6%96%87` decoded each UTF-8 byte
+  as Latin-1 mojibake, so Chinese property keys could not be
+  referenced): escapes now decode as UTF-8, invalid sequences kept
+  verbatim
+- **vendored moonschema**: the x-rules lexer extracted number/identifier
+  tokens by codepoint indices into UTF-16 slices — any emoji earlier in
+  the expression garbled every later token; count keywords
+  (`minLength` etc.) accepted up to 9e15 and silently saturated to
+  Int32 on conversion (now an explicit compile error past the Int
+  range); the `enum` error message claimed "non-empty" while empty
+  arrays were accepted
+
+### Added
+
+- The generated-accessors example now carries TWO structs (one
+  `pub(all)`, both with derive closing lines) — the CI
+  regenerate-and-diff self-check pins the authentic `moon info` shapes
+  the parser previously mishandled
+
+### Tests
+
+- 377 tests on js, 345 on wasm (+10: derive/pub(all)/mut/collision
+  parsing, delete_field subtree notification, $ref cycles, deep-schema
+  compile cap, UTF-8 pointer decoding, Int-range counts, emoji-token
+  lexing)
+
 ## [0.9.0] - 2026-09-29
 
 ### Fixed

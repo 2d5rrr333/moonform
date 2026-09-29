@@ -108,40 +108,116 @@ fn hex_val(c : Char) -> Int? {
 
 ///|
 /// URI fragment 的百分号解码（`%25` -> `%` 等）。
-/// 仅处理 ASCII 范围的字节，非法序列原样保留。
+/// 修复（moonform vendor）：`%XX` 序列是 UTF-8 字节（RFC 3986），此前
+/// 每字节独立转码点（Latin-1 乱码——`#/properties/%E4%B8%AD` 解析不到
+/// 中文键）；现收集字节后整体做 UTF-8 解码，非法序列整体原样保留。
 fn percent_decode(t : String) -> String {
+  // pass 1: build the byte stream — raw ASCII chars as bytes, raw
+  // non-ASCII chars UTF-8 re-encoded, %XX as the literal byte
+  let bytes : Array[Int] = []
   let chars = t.to_array()
-  let b = StringBuilder()
-  let mut i = 0
   let n = chars.length()
+  let mut i = 0
   while i < n {
     let c = chars[i]
     if c == '%' && i + 2 < n {
       let h = hex_val(chars[i + 1])
       let l = hex_val(chars[i + 2])
       match (h, l) {
-        (Some(hh), Some(ll)) =>
-          match (hh * 16 + ll).to_char() {
-            Some(decoded) => {
-              b.write_char(decoded)
-              i += 3
-            }
-            None => {
-              b.write_char(c)
-              i += 1
-            }
-          }
+        (Some(hh), Some(ll)) => {
+          bytes.push(hh * 16 + ll)
+          i += 3
+        }
         _ => {
-          b.write_char(c)
+          utf8_encode_char(c.to_int(), bytes)
           i += 1
         }
       }
     } else {
-      b.write_char(c)
+      utf8_encode_char(c.to_int(), bytes)
       i += 1
     }
   }
-  b.to_string()
+  // pass 2: UTF-8 decode; invalid sequences keep the original token
+  match utf8_decode(bytes) {
+    Some(s) => s
+    None => t
+  }
+}
+
+///|
+fn utf8_encode_char(cp : Int, out : Array[Int]) -> Unit {
+  if cp < 0x80 {
+    out.push(cp)
+  } else if cp < 0x800 {
+    out.push(0xC0 | (cp >> 6))
+    out.push(0x80 | (cp & 0x3F))
+  } else if cp < 0x10000 {
+    out.push(0xE0 | (cp >> 12))
+    out.push(0x80 | ((cp >> 6) & 0x3F))
+    out.push(0x80 | (cp & 0x3F))
+  } else {
+    out.push(0xF0 | (cp >> 18))
+    out.push(0x80 | ((cp >> 12) & 0x3F))
+    out.push(0x80 | ((cp >> 6) & 0x3F))
+    out.push(0x80 | (cp & 0x3F))
+  }
+}
+
+///|
+fn utf8_decode(bytes : Array[Int]) -> String? {
+  let b = StringBuilder()
+  let n = bytes.length()
+  let mut i = 0
+  fn cont(j : Int) -> Bool {
+    j >= 0 && j < n && bytes[j] >= 0x80 && bytes[j] <= 0xBF
+  }
+  while i < n {
+    let b0 = bytes[i]
+    if b0 < 0x80 {
+      b.write_char(b0.unsafe_to_char())
+      i += 1
+    } else if b0 >= 0xC2 && b0 <= 0xDF && cont(i + 1) {
+      let cp = ((b0 & 0x1F) << 6) | (bytes[i + 1] & 0x3F)
+      match cp.to_char() {
+        Some(ch) => {
+          b.write_char(ch)
+          i += 2
+        }
+        None => return None
+      }
+    } else if b0 >= 0xE0 && b0 <= 0xEF && cont(i + 1) && cont(i + 2) {
+      let cp = ((b0 & 0x0F) << 12) |
+        ((bytes[i + 1] & 0x3F) << 6) |
+        (bytes[i + 2] & 0x3F)
+      match cp.to_char() {
+        Some(ch) => {
+          b.write_char(ch)
+          i += 3
+        }
+        None => return None
+      }
+    } else if b0 >= 0xF0 &&
+      b0 <= 0xF4 &&
+      cont(i + 1) &&
+      cont(i + 2) &&
+      cont(i + 3) {
+      let cp = ((b0 & 0x07) << 18) |
+        ((bytes[i + 1] & 0x3F) << 12) |
+        ((bytes[i + 2] & 0x3F) << 6) |
+        (bytes[i + 3] & 0x3F)
+      match cp.to_char() {
+        Some(ch) => {
+          b.write_char(ch)
+          i += 4
+        }
+        None => return None
+      }
+    } else {
+      return None // stray continuation byte / truncated sequence
+    }
+  }
+  Some(b.to_string())
 }
 
 ///|

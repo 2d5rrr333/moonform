@@ -14,6 +14,15 @@
 /// A per-field validator over a compiled schema: converts the WHOLE form
 /// value to Json, validates once, and reports only the errors addressed
 /// to `field_name` in this field's slot.
+///
+/// Semantics notes:
+/// - each validation runs the WHOLE schema (O(schema) per field; a
+///   submit with N mounted schema fields validates N times)
+/// - root-level non-required errors (a root `type` mismatch, a `false`
+///   schema) have no field slot to land in and are DROPPED — they are
+///   the group validator's domain
+/// - `field_lens` is reserved for future single-field revalidation; it
+///   is not consulted today
 pub fn[A, V : ToJson] schema_field_validator(
   schema : @moonschema.Schema,
   field_name : String,
@@ -96,7 +105,10 @@ fn message_mentions(message : String, field_name : String) -> Bool {
 /// "/items/0/name" → the nested key `items.0.name`). Root-path
 /// `required` errors name the missing property in the message and
 /// distribute to that field; other root-path errors (e.g. `minItems` on
-/// an array group) become group-level errors.
+/// an array group) become group-level errors. NESTED `required` errors
+/// (a missing property inside a child object) attach to the CHILD's
+/// pointer and thus land on the child field's slot — the message names
+/// the grandchild.
 pub fn[G : ToJson, V] schema_group_validator(
   schema : @moonschema.Schema,
 ) -> @core.GroupValidator[G, V] {

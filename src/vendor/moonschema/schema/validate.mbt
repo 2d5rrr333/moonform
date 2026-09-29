@@ -52,6 +52,9 @@ fn key_is_known(kw : Keywords, k : String) -> Bool {
 }
 
 ///|
+/// 修复（moonform vendor）：`$ref` 循环（如 `{"$ref": "#"}`）与超深
+/// 实例/模式结构此前无界递归导致栈溢出 abort——现按 `Ctx::depth`
+/// 截断（上限 256 层），超限记录一条校验错误并返回失败。
 fn validate_node(
   root : Schema,
   node : Node,
@@ -60,7 +63,24 @@ fn validate_node(
   spath : Array[String],
   errors : Array[ValidationError],
 ) -> Bool {
-  match node {
+  let ctx = root.ctx
+  if ctx.depth >= depth_limit() {
+    errors.push(
+      err(
+        "recursion",
+        ipath,
+        spath,
+        tr(
+          ctx.locale,
+          "schema recursion depth exceeded (limit \{depth_limit()})",
+          "模式递归深度超限（上限 \{depth_limit()}）",
+        ),
+      ),
+    )
+    return false
+  }
+  ctx.depth = ctx.depth + 1
+  let result = match node {
     BoolNode(true) => true
     BoolNode(false) => {
       errors.push(
@@ -79,6 +99,8 @@ fn validate_node(
     }
     SchemaNode(kw) => validate_keywords(root, kw, v, ipath, spath, errors)
   }
+  ctx.depth = ctx.depth - 1
+  result
 }
 
 ///|

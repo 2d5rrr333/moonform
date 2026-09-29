@@ -47,3 +47,22 @@ pub fn run_demo() -> Bool {
   form.get_value(profile_nickname_l()) == "moonbit" &&
   form.get_value(profile_age_l()) == 20
 }
+
+///|
+/// The generated Address accessors (pub(all) struct with a derive closing
+/// line — the authentic `moon info` shapes) compile and behave too.
+pub fn run_address_demo() -> Bool {
+  let form = @core.FormApi::make({ city: "", zip: 0, })
+  let city = form.field(address_city_l(), on_change_validate=@rules.required())
+  city.mount()
+  city.set_value("")
+  if !city.meta().has_errors() {
+    return false
+  }
+  city.set_value("Beijing")
+  if city.meta().has_errors() {
+    return false
+  }
+  form.get_value(address_zip_l()) == 0 &&
+  form.get_value(address_city_l()) == "Beijing"
+}

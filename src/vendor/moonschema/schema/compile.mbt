@@ -19,6 +19,7 @@ pub fn compile(
     assert_format: options.assert_format,
     locale: options.locale,
     cache: Map([], capacity=16),
+    depth: 0,
   }
   let node = compile_node(schema, ctx, ["#"])
   { node, ctx, }
@@ -35,12 +36,21 @@ fn compile_schema(
 }
 
 ///|
+/// 修复（moonform vendor）：超深嵌套模式文档此前无界递归编译导致栈
+/// 溢出 abort——现按 `Ctx::depth` 截断（上限 512 层）。
 fn compile_node(
   v : Json,
   ctx : Ctx,
   spath : Array[String],
 ) -> Node raise CompileError {
-  match v {
+  if ctx.depth >= depth_limit() {
+    raise InvalidSchema(
+      schema_pointer(spath),
+      "schema nesting too deep (limit \{depth_limit()})",
+    )
+  }
+  ctx.depth = ctx.depth + 1
+  let node = match v {
     True => BoolNode(true)
     False => BoolNode(false)
     Object(_) => SchemaNode(compile_keywords(v, ctx, spath))
@@ -50,6 +60,8 @@ fn compile_node(
         "a schema must be an object or a boolean",
       )
   }
+  ctx.depth = ctx.depth - 1
+  node
 }
 
 ///|
@@ -161,7 +173,10 @@ fn compile_count(
   guard v is Number(d, ..) else {
     raise InvalidSchema(path, "\"\{kw_name}\" must be a non-negative integer")
   }
-  if d.is_nan() || !(d >= 0.0 && d <= 9.0e15 && d == d.floor()) {
+  // 修复（moonform vendor）：原上界 9.0e15（JSON 安全整数域）超出 32 位
+  // Int，`to_int` 会静默饱和到 2147483647；收紧到 Int 范围，超限直接
+  // 报编译错误而非静默截断语义
+  if d.is_nan() || !(d >= 0.0 && d <= 2147483647.0 && d == d.floor()) {
     raise InvalidSchema(path, "\"\{kw_name}\" must be a non-negative integer")
   }
   d.to_int()
@@ -260,8 +275,10 @@ fn compile_keywords(
         }
       "enum" =>
         match kv {
+          // 修复（moonform vendor）：消息与行为对齐——空数组被接受
+          //（会拒绝一切值，规范允许），错误分支只报类型不符
           Array(a) => kw.enum_ = Some(a)
-          _ => raise InvalidSchema(path, "\"enum\" must be a non-empty array")
+          _ => raise InvalidSchema(path, "\"enum\" must be an array")
         }
       "const" => kw.const_ = Some(kv)
       "multipleOf" => {

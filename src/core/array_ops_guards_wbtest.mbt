@@ -281,3 +281,20 @@ test "group on array element: empty array after clear never aborts" {
   form.set_value(at(ag_names_l(), 1), "y")
   assert_eq(g0.error_for_cause(Change), None)
 }
+
+///|
+test "delete_field notifies every removed key in the subtree" {
+  let form = FormApi::make({ agitems: [{ agname: "a", }, { agname: "b", }], })
+  let f1 = form.field(ag_name_at(1))
+  f1.mount()
+  form.set_value(ag_name_at(1), "changed") // meta exists at items.1.name
+  // an exact-key subscriber on the DEEP key must see the subtree deletion
+  let hits = { n: 0, }
+  let _sub = form.subscribe_field(ag_name_at(1).key, () => hits.n = hits.n + 1)
+  // delete the subtree root items.1: both items.1 and items.1.name go away
+  form.delete_field(ag_items_l().key.push_idx(1))
+  assert_false(form.has_field_meta(ag_name_at(1).key))
+  // the deep-key subscriber was notified (previously only the deleted
+  // prefix itself notified — deeper subscribers stayed stale forever)
+  assert_eq(hits.n, 1)
+}

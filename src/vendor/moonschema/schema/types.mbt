@@ -155,12 +155,23 @@ pub fn CompileOptions::new(
 
 ///|
 /// 编译上下文：根文档 + `$ref` 惰性编译缓存（支持递归模式）。
+/// `depth` 为当前编译/校验递归深度（moonform vendor 修复：`$ref` 循环
+/// 与超深嵌套模式此前无界自递归导致栈溢出 abort，现于 512 层截断）。
 struct Ctx {
   root : Json
   strict : Bool
   assert_format : Bool
   locale : Locale
   cache : Map[String, Schema]
+  mut depth : Int
+}
+
+///|
+/// 递归深度上限（编译与校验共用）。moonform vendor 修复新增：取 256 层
+/// ——足以覆盖真实的递归模式/深嵌套数据（JSON 解析器自身也递归），又
+/// 保证 js debug 构建（每层多个栈帧）不触栈溢出。
+fn depth_limit() -> Int {
+  256
 }
 
 ///|

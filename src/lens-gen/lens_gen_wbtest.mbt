@@ -33,6 +33,7 @@ test "parser: fields with types, generics on header, mut modifier" {
   let structs = parse_only(core_mbti_sample())
   let lens = find_struct(structs, "Lens")
   let fms = find_struct(structs, "FieldMetaState")
+  let form_api = find_struct(structs, "FormApi")
   assert_eq(lens.type_params, ["S", "A"])
   assert_eq(lens.fields.length(), 3)
   assert_eq(lens.fields[0].name, "key")
@@ -41,6 +42,83 @@ test "parser: fields with types, generics on header, mut modifier" {
   assert_eq(fms.fields.length(), 3)
   assert_eq(fms.fields[1].name, "error_map")
   assert_eq(fms.fields[1].type_ref, "ErrorMap")
+  // `mut` fields are ordinary fields to lenses — the modifier is stripped
+  // (they used to be silently dropped)
+  assert_eq(form_api.fields.length(), 2)
+  assert_eq(form_api.fields[0].name, "default_values")
+  assert_eq(form_api.fields[0].type_ref, "V")
+}
+
+///|
+/// The authentic `moon info` shapes the parser must survive: derive
+/// clauses on CLOSING lines, pub(all) visibility, several structs in a
+/// row. (The derive closing line used to run the parser past the struct,
+/// absorbing the NEXT struct's fields and duplicating accessors.)
+fn derive_mbti_sample() -> String {
+  let lines : Array[String] = [
+    "// Generated using `moon info`, DON'T EDIT IT", "package \"2d5rrr333/moonform/examples/generated\"",
+    "", "// Types and methods", "pub struct Profile {", "  nickname : String", "  age : Int",
+    "} derive(Eq, @debug.Debug)", "pub(all) struct Address {", "  city : String",
+    "  zip : Int", "} derive(Eq, @debug.Debug)", "pub struct Plain {", "  note : String",
+    "}", "", "pub fn Profile::equal(Self, Self) -> Bool",
+  ]
+  lines.join("\n")
+}
+
+///|
+test "parser: derive closing lines end the struct — no field absorption" {
+  let structs = parse_only(derive_mbti_sample())
+  assert_eq(structs.length(), 3)
+  let profile = find_struct(structs, "Profile")
+  let address = find_struct(structs, "Address")
+  let plain = find_struct(structs, "Plain")
+  // each struct keeps EXACTLY its own fields (the old parser absorbed
+  // Address's fields into Profile after its derive closing line)
+  assert_eq(profile.fields.length(), 2)
+  assert_eq(profile.fields[0].name, "nickname")
+  assert_eq(address.fields.length(), 2)
+  assert_eq(address.fields[0].name, "city")
+  assert_eq(address.fields[1].type_ref, "Int")
+  assert_eq(plain.fields.length(), 1)
+  assert_eq(plain.fields[0].name, "note")
+  // the method line after the last struct is never a field
+  assert_false(plain.fields[0].name == "equal")
+}
+
+///|
+test "parser: pub(all) structs are extracted (form value types)" {
+  let structs = parse_only(derive_mbti_sample())
+  let address = find_struct(structs, "Address")
+  assert_eq(address.type_params, [])
+  // and the emitter covers them like any concrete struct
+  let code = emit_all(structs, "@core")
+  assert_true(
+    code.contains("fn address_city_l() -> @core.Lens[Address, String]"),
+  )
+}
+
+///|
+test "emitter: name collisions are skipped with a marker, never duplicated" {
+  // FooBar.x and Foo.bar_x both snake-case to foo_bar_x — a duplicate
+  // function would not compile
+  let lines : Array[String] = [
+    "pub struct FooBar {", "  x : Int", "}", "pub struct Foo {", "  bar_x : Int",
+    "}",
+  ]
+  let structs = parse_only(lines.join("\n"))
+  let code = emit_all(structs, "@core")
+  // exactly one definition of the colliding name
+  let mut defs = 0
+  for l in code.split("\n") {
+    if l.to_owned().contains("fn foo_bar_x_l()") {
+      defs = defs + 1
+    }
+  }
+  assert_eq(defs, 1)
+  // the loser is skipped with an explanatory comment
+  assert_true(
+    code.contains("// skipped Foo.bar_x: foo_bar_x_l already generated"),
+  )
 }
 
 ///|

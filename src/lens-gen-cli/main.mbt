@@ -20,6 +20,26 @@ extern "js" fn js_write_file(path : String, content : String) -> Unit =
   #| (path, content) => require("node:fs").writeFileSync(path, content)
 
 ///|
+extern "js" fn js_file_exists(path : String) -> Bool =
+  #| (path) => require("node:fs").existsSync(path)
+
+///|
+fn cli_usage() -> Unit {
+  println("lens-gen: .mbti in, lens accessor source out")
+  println(
+    "usage: moon run src/lens-gen-cli -- <path.mbti> [core_alias] [-o <out.mbt>]",
+  )
+  println("  core_alias  import alias for moonform/core, default @core")
+  println("  -o          write to a file instead of stdout")
+}
+
+///|
+fn cli_error(message : String) -> Unit {
+  println("lens-gen: error: \{message}")
+  cli_usage()
+}
+
+///|
 fn main {
   let fixed = js_cli_args()
   let args : Array[String] = []
@@ -27,26 +47,45 @@ fn main {
     args.push(fixed[i])
   }
   if args.length() < 1 {
-    println("lens-gen: .mbti in, lens accessor source out")
-    println(
-      "usage: moon run src/lens-gen-cli -- <path.mbti> [core_alias] [-o <out.mbt>]",
-    )
-    println("  core_alias  import alias for moonform/core, default @core")
-    println("  -o          write to a file instead of stdout")
+    cli_usage()
     return
   }
-  let input = args[0]
-  let mut core_alias = "@core"
+  // positional tokens (input path first, then the optional core alias);
+  // `-o` takes the next token — flags anywhere, position-independent
+  let positional : Array[String] = []
   let mut out_path : String? = None
-  let mut i = 1
+  let mut i = 0
   while i < args.length() {
-    if args[i] == "-o" && i + 1 < args.length() {
+    if args[i] == "-o" {
+      if i + 1 >= args.length() {
+        cli_error("-o requires a value (the output file path)")
+        return
+      }
       out_path = Some(args[i + 1])
       i = i + 2
+    } else if args[i].has_prefix("-") {
+      cli_error("unknown flag \{args[i]}")
+      return
     } else {
-      core_alias = args[i]
+      positional.push(args[i])
       i = i + 1
     }
+  }
+  if positional.length() > 2 {
+    cli_error(
+      "too many arguments: expected <path.mbti> [core_alias], got \{positional.length()}",
+    )
+    return
+  }
+  let input = positional[0]
+  let core_alias = if positional.length() == 2 {
+    positional[1]
+  } else {
+    "@core"
+  }
+  if !js_file_exists(input) {
+    cli_error("input file not found: \{input}")
+    return
   }
   let content = js_read_file(input)
   let code = @lensgen.generate(content, core_alias)

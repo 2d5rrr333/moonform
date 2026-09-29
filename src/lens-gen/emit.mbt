@@ -42,17 +42,48 @@ pub fn emit_for_struct(st : MbtiStruct, core_alias : String) -> String {
 }
 
 ///|
-/// Emit accessors for every concrete struct in the parsed set.
+/// Emit accessors for every concrete struct in the parsed set. Fields
+/// whose generated function name collides with an earlier one
+/// (`FooBar.x` and `Foo.bar_x` both yield `foo_bar_x_l`) are SKIPPED with
+/// a marker comment — a duplicate definition would not compile.
 pub fn emit_all(structs : Array[MbtiStruct], core_alias : String) -> String {
   let parts : Array[String] = []
+  let used : Array[String] = []
   for st in structs {
-    let code = emit_for_struct(st, core_alias)
-    if code.length() > 0 {
+    if st.type_params.length() > 0 {
+      continue // generic structs need hand-written accessors
+    }
+    let body : Array[String] = []
+    for f in st.fields {
+      let fname = "\{snake(st.name)}_\{snake(f.name)}_l"
+      if name_used(used, fname) {
+        body.push(
+          "// skipped \{st.name}.\{f.name}: \{fname} already generated (name collision — write this accessor by hand)",
+        )
+      } else {
+        used.push(fname)
+        body.push(emit_lens(st.name, f, core_alias))
+      }
+    }
+    if body.length() > 0 {
       parts.push("// struct \{st.name}")
-      parts.push(code)
+      for b in body {
+        parts.push(b)
+      }
     }
   }
   parts.join("\n\n") + "\n"
+}
+
+///|
+fn name_used(used : Array[String], name : String) -> Bool {
+  let mut hit = false
+  for u in used {
+    if u == name {
+      hit = true
+    }
+  }
+  hit
 }
 
 ///|

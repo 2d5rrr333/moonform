@@ -107,3 +107,18 @@ test "语法错误在编译期暴露" {
   let hit5 = m5.contains("expected identifier")
   inspect(hit5, content="true")
 }
+
+///|
+/// 回归（moonform vendor 修复）：数字/标识符字面量此前用码点下标做
+/// UTF-16 切片——表达式里出现增补平面字符（emoji）后，其后的 token
+/// 提取全部错位。改从码点数组拼接后语义正常。
+test "增补平面字符后的 token 提取不错位" {
+  // emoji 字符串字面量之后的数字与运算照常解析
+  inspect(holds("\"🙂\" == \"🙂\"", "null"), content="true")
+  inspect(holds("\"🤣\" != \"🤔\"", "null"), content="true")
+  // emoji 字面量之后的数字字面量不再错位
+  inspect(holds("\"a\" < \"🙂\" && 1 + 2 == 3", "null"), content="true")
+  // 实例字段路径中的标识符在 emoji 字面量之后不再错位
+  let e = compile_expr("\"🙂\" != \"x\" && total + 1 == 3")
+  inspect(rule_holds(e, j("{\"total\": 2}")), content="true")
+}

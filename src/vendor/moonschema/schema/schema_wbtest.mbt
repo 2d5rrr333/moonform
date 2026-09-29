@@ -3,6 +3,97 @@ fn p(s : String) -> Json raise {
   parse(s)
 }
 
+// -- moonform vendor 回归（递归守卫 / 指针解码 / 编译边界） --------------------
+
+///|
+/// 回归（moonform vendor 修复）：`$ref: "#"` 自引用与互相引用此前无界
+/// 递归导致栈溢出 abort——现按 256 层深度截断，返回校验错误。
+test "$ref 循环不栈溢出（深度截断）" {
+  let s =
+    #|{ "$ref": "#" }
+  let v = compile(p(s))
+  inspect(v.check(Json::string("x")), content="false")
+  let errs = v.validate(Json::string("x"))
+  let mut saw_recursion = false
+  for e in errs {
+    if e.keyword == "recursion" {
+      saw_recursion = true
+    }
+  }
+  assert_true(saw_recursion)
+  // 互相引用 A -> B -> A 同样被截断
+  let s2 =
+    #|{
+    #|  "properties": { "a": { "$ref": "#/$defs/b" } },
+    #|  "$defs": { "b": { "$ref": "#/properties/a" } }
+    #|}
+  let v2 = compile(p(s2))
+  let inst : Map[String, Json] = { "a": Json::string("x") }
+  inspect(v2.check(Json::object(inst)), content="false")
+}
+
+///|
+/// 回归（moonform vendor 修复）：超深嵌套模式文档此前无界递归编译导致
+/// 栈溢出 abort——现编译期即报 InvalidSchema。
+test "超深嵌套模式在编译期被截断" {
+  // 从最内层向外包 600 层 {"properties": {"a": ...}}
+  let mut doc = Json::object({ "type": Json::string("string") })
+  for _i in 0..<600 {
+    doc = Json::object({ "properties": Json::object({ "a": doc }) })
+  }
+  let mut raised = false
+  try {
+    let _ = compile(doc)
+  } catch {
+    _ => raised = true
+  }
+  assert_true(raised)
+}
+
+///|
+/// 回归（moonform vendor 修复）：percent-escape 序列是 UTF-8 字节——
+/// `#/properties/%E4%B8%AD%E6%96%87` 此前逐字节 Latin-1 乱码、解析不到
+/// 中文键；现整体 UTF-8 解码。
+test "指针 percent-decode 按 UTF-8 解码中文键" {
+  let tokens = parse_local_ref("#/properties/%E4%B8%AD%E6%96%87")
+  assert_eq(tokens, Some(["properties", "中文"]))
+  // ASCII 转义不受影响
+  assert_eq(parse_local_ref("#/a%2Eb"), Some(["a.b"]))
+  // 非法 UTF-8 序列整体原样保留
+  assert_eq(parse_local_ref("#/%FF"), Some(["%FF"]))
+  // 端到端：中文键上的 $ref 解析成功
+  let s =
+    #|{
+    #|  "properties": { "中文": { "$ref": "#/$defs/name" } },
+    #|  "$defs": { "name": { "type": "string" } }
+    #|}
+  let v = compile(p(s))
+  let good : Map[String, Json] = { "中文": Json::string("ok") }
+  let bad : Map[String, Json] = { "中文": Json::number(1) }
+  inspect(v.check(Json::object(good)), content="true")
+  inspect(v.check(Json::object(bad)), content="false")
+}
+
+///|
+/// 回归（moonform vendor 修复）：count 类关键词上界此前为 9e15，
+/// `to_int` 静默饱和到 2147483647；现收紧到 Int 范围、超限报错。
+test "count 关键词超 Int 范围直接编译报错" {
+  let s =
+    #|{ "minLength": 5000000000 }
+  let mut raised = false
+  try {
+    let _ = compile(p(s))
+  } catch {
+    _ => raised = true
+  }
+  assert_true(raised)
+  // Int 范围内的值照常工作
+  let sok =
+    #|{ "minLength": 2147483647 }
+  let ok = compile(p(sok))
+  inspect(ok.check(Json::string("x")), content="false")
+}
+
 ///|
 test "type: 单类型 / 类型数组 / integer" {
   let s1 =

@@ -5,3 +5,8 @@
 test "generated: accessors drive a full form flow" {
   assert_true(@generated.run_demo())
 }
+
+///|
+test "generated: pub(all) struct accessors work end-to-end" {
+  assert_true(@generated.run_address_demo())
+}

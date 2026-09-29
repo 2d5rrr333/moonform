@@ -156,4 +156,4 @@ jobs:
       - name: lens-gen CLI self-check (regenerate + diff)
         run: |
           moon run src/lens-gen-cli --target js -- src/examples/generated/pkg.generated.mbti -o /tmp/gen.mbt
-          diff /tmp/gen.mbt src/examples/generated/profile_lenses.generated.mbt
+          diff /tmp/gen.mbt src/examples/generated/lenses.generated.mbt
