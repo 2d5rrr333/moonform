@@ -73,13 +73,48 @@ fn[V] FormApi::fire_on_change_group(self : FormApi[V], group_key : Key) -> Unit 
 
 ///|
 /// Dispatch a field change to mounted groups: every group whose key prefixes
-/// `changed` runs its change validation (with error distribution) and its
-/// onChange listener against the current values. Returns the matching group
-/// keys (canonical order).
+/// `changed` (the groups CONTAINING the change) runs its change validation
+/// (with error distribution) and its onChange listener against the current
+/// values. Returns the matching group keys (canonical order).
 fn[V] FormApi::dispatch_groups(self : FormApi[V], changed : Key) -> Array[Key] {
   let hits : Array[Key] = []
+  let ks : Array[Key] = []
   for k in self.group_regs.keys() {
+    ks.push(k)
+  }
+  for k in ks {
     if changed.has_prefix(k) {
+      match self.group_regs.get(k) {
+        Some(reg) => {
+          (reg.dispatch_change)(self.values)
+          hits.push(k)
+        }
+        None => ()
+      }
+    }
+  }
+  hits.sort()
+  hits
+}
+
+///|
+/// Dispatch a group write to the groups mounted strictly UNDER the written
+/// key (nested groups: the write covered their whole subtree — their keys
+/// extend the written key, so the containing-group dispatch above cannot
+/// reach them). Snapshot iteration (see `dispatch_groups`): dispatch_change
+/// runs user code that may mount/unmount groups mid-dispatch. Returns the
+/// dispatched keys (canonical order).
+fn[V] FormApi::dispatch_nested_groups(
+  self : FormApi[V],
+  written : Key,
+) -> Array[Key] {
+  let hits : Array[Key] = []
+  let ks : Array[Key] = []
+  for k in self.group_regs.keys() {
+    ks.push(k)
+  }
+  for k in ks {
+    if k != written && k.has_prefix(written) {
       match self.group_regs.get(k) {
         Some(reg) => {
           (reg.dispatch_change)(self.values)

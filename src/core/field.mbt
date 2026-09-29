@@ -107,12 +107,20 @@ pub fn[V, A : Eq] FieldApi::mount(self : FieldApi[V, A]) -> Unit {
     self.on_change_l,
     change_dispatch,
     submit_dispatch,
+    () => self.abort_async_validation(),
   )
   self.mount_token = Some(token)
   // register dependency watches (upstream onChangeListenTo), owned by this
   // field's key so unmount removes them wholesale
   for dep in self.listen_to {
-    let run = () => self.run_validation_against(Change, self.form.values)
+    // the is_dead guard: the dispatch snapshots the watcher set, so a
+    // field unmounted by an earlier watcher's notifications must not
+    // validate through its frozen closure
+    let run = () => {
+      if !self.is_dead() {
+        self.run_validation_against(Change, self.form.values)
+      }
+    }
     let watchers = match self.form.dep_watches.get(dep) {
       Some(ws) => ws
       None => {
@@ -129,7 +137,20 @@ pub fn[V, A : Eq] FieldApi::mount(self : FieldApi[V, A]) -> Unit {
     Some(cb) => cb()
     None => ()
   }
-  self.run_validation(Mount)
+  // the meta notification / onMount listener may have unmounted the field:
+  // skip the Mount validation (no phantom errors on a dead instance)
+  if !self.is_dead() {
+    self.run_validation(Mount)
+  }
+}
+
+///|
+/// A previously-mounted instance that has been unmounted: its wiring is
+/// torn down (registration removed, in-flight async aborted) — later calls
+/// on the handle must not write state or notify (phantom errors).
+/// Never-mounted handles stay usable as pure lens + validation accessors.
+fn[V, A] FieldApi::is_dead(self : FieldApi[V, A]) -> Bool {
+  !self.mounted && self.mount_token is Some(_)
 }
 
 ///|
@@ -302,15 +323,8 @@ pub fn[V, A] FieldApi::unmount(self : FieldApi[V, A]) -> Unit {
         return // stale instance: a newer mount owns the registration
       }
       self.form.unregister_field(key)
-      // remove this field's dependency watches (listen_to cleanup)
-      for dep in self.listen_to {
-        match self.form.dep_watches.get(dep) {
-          Some(watchers) => {
-            let _ = watchers.remove(key)
-          }
-          None => ()
-        }
-      }
+      // (the field's dependency watches and submit validator were removed
+      // together with the registration)
       // reset meta to default, preserving interaction flags
       self.form.meta.update(key, m => {
         ..FieldMetaState::default_meta(),
@@ -392,7 +406,11 @@ pub fn[V, A] FieldApi::set_value(
     dont_run_listeners=dont_run_listeners.unwrap_or(false),
     dont_validate=dont_validate.unwrap_or(false),
   )
-  if !dont_validate.unwrap_or(false) &&
+  // the write's notifications may have unmounted the field: scheduling on a
+  // dead instance would capture a fresh async run whose completion passes
+  // the race guard and lands phantom validating state / errors
+  if !self.is_dead() &&
+    !dont_validate.unwrap_or(false) &&
     self.validation.on_change_async is Some(_) {
     self.schedule_async_validation(ChangeAsync)
   }
@@ -416,9 +434,13 @@ pub fn[V, A] FieldApi::handle_blur(self : FieldApi[V, A]) -> Unit {
     Some(cb) => cb()
     None => ()
   }
-  self.run_validation(Blur)
-  if self.validation.on_blur_async is Some(_) {
-    self.schedule_async_validation(BlurAsync)
+  // the meta notification / onBlur listener may have unmounted the field:
+  // a dead instance does not validate
+  if !self.is_dead() {
+    self.run_validation(Blur)
+    if self.validation.on_blur_async is Some(_) {
+      self.schedule_async_validation(BlurAsync)
+    }
   }
 }
 

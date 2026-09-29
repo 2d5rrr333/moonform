@@ -64,7 +64,7 @@ pub fn[V, A] FormApi::insert_value(
 ) -> Unit {
   let len = lens.get(self.values).length()
   let i = if index < 0 { 0 } else if index > len { len } else { index }
-  self.meta.remap_insert(lens.key, i)
+  self.remap_insert(lens.key, i)
   self.meta.bump_array_version(lens.key)
   self.array_op_write(
     lens,
@@ -85,11 +85,59 @@ pub fn[V, A] FormApi::insert_value(
   )
 }
 
+// -- array-op remap wrappers ---------------------------------------------------
+
+///|
+/// Meta remap for remove(i) + group ownership migration (distributed-error
+/// records follow the elements their errors moved to — see
+/// `FormApi::remap_group_owned`).
+fn[V] FormApi::remap_remove(self : FormApi[V], prefix : Key, i : Int) -> Unit {
+  self.meta.remap_remove(prefix, i)
+  self.remap_group_owned(prefix, j => if j > i { j - 1 } else { j }, j => j == i)
+}
+
+///|
+/// Meta remap for insert(i) + group ownership migration.
+fn[V] FormApi::remap_insert(self : FormApi[V], prefix : Key, i : Int) -> Unit {
+  self.meta.remap_insert(prefix, i)
+  self.remap_group_owned(prefix, j => if j >= i { j + 1 } else { j }, _ => false)
+}
+
+///|
+/// Meta remap for swap(i, j) + group ownership migration.
+fn[V] FormApi::remap_swap(
+  self : FormApi[V],
+  prefix : Key,
+  i : Int,
+  j : Int,
+) -> Unit {
+  self.meta.remap_swap(prefix, i, j)
+  self.remap_group_owned(
+    prefix,
+    k => if k == i { j } else if k == j { i } else { k },
+    _ => false,
+  )
+}
+
+///|
+/// Meta remap for move(from, to) + group ownership migration.
+fn[V] FormApi::remap_move(
+  self : FormApi[V],
+  prefix : Key,
+  from : Int,
+  to : Int,
+) -> Unit {
+  self.meta.remap_move(prefix, from, to)
+  self.remap_group_owned(prefix, k => move_idx(k, from, to), _ => false)
+}
+
 ///|
 /// Remove the value at `index` (upstream `removeFieldValue`): elements above
 /// shift down; the vacated last slot's meta subtree is deleted. Meta
 /// remaps BEFORE the value write (see insert_value) so the group change
-/// re-validation sees a consistent layout.
+/// re-validation sees a consistent layout. An out-of-range index is a FULL
+/// no-op (values and meta alike — remapping with a bad index would corrupt
+/// the meta layout against unchanged values).
 pub fn[V, A] FormApi::remove_value(
   self : FormApi[V],
   lens : Lens[V, Array[A]],
@@ -97,8 +145,11 @@ pub fn[V, A] FormApi::remove_value(
   dont_update_meta? : Bool,
 ) -> Unit {
   let old = lens.get(self.values)
-  let last_index = if old.length() > 0 { old.length() - 1 } else { 0 }
-  self.meta.remap_remove(lens.key, index)
+  if index < 0 || index >= old.length() {
+    return // out-of-range: no-op (value layer AND meta layer)
+  }
+  let last_index = old.length() - 1
+  self.remap_remove(lens.key, index)
   self.meta.bump_array_version(lens.key)
   self.array_op_write(
     lens,
@@ -119,7 +170,9 @@ pub fn[V, A] FormApi::remove_value(
 
 ///|
 /// Swap the values at `index1` and `index2` (upstream `swapFieldValues`).
-/// Out-of-range indices leave the array unchanged for that position.
+/// An out-of-range index is a FULL no-op (values and meta alike — the meta
+/// remap would exile the slot's subtree to a phantom key while the value
+/// layer stays unchanged).
 pub fn[V, A] FormApi::swap_values(
   self : FormApi[V],
   lens : Lens[V, Array[A]],
@@ -127,19 +180,19 @@ pub fn[V, A] FormApi::swap_values(
   index2 : Int,
   dont_update_meta? : Bool,
 ) -> Unit {
-  self.meta.remap_swap(lens.key, index1, index2)
+  let len = lens.get(self.values).length()
+  if index1 < 0 || index1 >= len || index2 < 0 || index2 >= len {
+    return // out-of-range: no-op (value layer AND meta layer)
+  }
+  self.remap_swap(lens.key, index1, index2)
   self.meta.bump_array_version(lens.key)
   self.array_op_write(
     lens,
     xs => {
       let ys = xs.copy()
-      let in1 = index1 >= 0 && index1 < ys.length()
-      let in2 = index2 >= 0 && index2 < ys.length()
-      if in1 && in2 {
-        let tmp = ys[index1]
-        ys[index1] = ys[index2]
-        ys[index2] = tmp
-      }
+      let tmp = ys[index1]
+      ys[index1] = ys[index2]
+      ys[index2] = tmp
       ys
     },
     dont_update_meta=dont_update_meta.unwrap_or(false),
@@ -149,6 +202,8 @@ pub fn[V, A] FormApi::swap_values(
 ///|
 /// Move the value at `from` to `to` (upstream `moveFieldValues`): the
 /// element lands at `to`; elements in between shift by one toward `from`.
+/// An out-of-range `from` is a FULL no-op; `to` is clamped to the array
+/// bounds so the meta remap matches where the element actually lands.
 pub fn[V, A] FormApi::move_value(
   self : FormApi[V],
   lens : Lens[V, Array[A]],
@@ -156,25 +211,22 @@ pub fn[V, A] FormApi::move_value(
   to : Int,
   dont_update_meta? : Bool,
 ) -> Unit {
-  self.meta.remap_move(lens.key, from, to)
+  let len = lens.get(self.values).length()
+  if from < 0 || from >= len {
+    return // out-of-range source: no-op (value layer AND meta layer)
+  }
+  let to_c = if to < 0 { 0 } else if to > len - 1 { len - 1 } else { to }
+  self.remap_move(lens.key, from, to_c)
   self.meta.bump_array_version(lens.key)
   self.array_op_write(
     lens,
     xs => {
       let ys = xs.copy()
-      if from >= 0 && from < ys.length() {
-        let elem = ys[from]
-        let _ = ys.remove(from)
-        // splice semantics: out-of-range `to` appends at the end
-        let dst = if to >= ys.length() {
-          ys.length()
-        } else if to < 0 {
-          0
-        } else {
-          to
-        }
-        ys.insert(dst, elem)
-      }
+      let elem = ys[from]
+      let _ = ys.remove(from)
+      // splice semantics: to_c == len-1 lands at the end after the removal
+      let dst = if to_c >= ys.length() { ys.length() } else { to_c }
+      ys.insert(dst, elem)
       ys
     },
     dont_update_meta=dont_update_meta.unwrap_or(false),

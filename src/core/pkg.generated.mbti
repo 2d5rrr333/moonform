@@ -149,6 +149,7 @@ pub(all) struct FieldReg[V] {
   probe_dirty : (V, V) -> Bool
   on_change : ((V) -> Unit)?
   validate_on_change : ((V) -> Unit)?
+  abort_async : () -> Unit
 }
 
 pub struct FormApi[V] {
@@ -240,7 +241,7 @@ pub struct FormGroupApi[V, G] {
   mut is_validating : Bool
   mut async_seq : Int
   mut async_timer : Int?
-  mut owned_field_errors : Array[(ValidationCause, Key)]
+  mut owned_field_errors : Array[GroupOwnedError]
 }
 pub fn[V, G] FormGroupApi::abort_async_validation(Self[V, G]) -> Unit
 pub fn[V, G] FormGroupApi::can_submit(Self[V, G]) -> Bool
@@ -269,10 +270,14 @@ pub fn GroupFieldError::equal(Self, Self) -> Bool
 pub fn GroupFieldError::not_equal(Self, Self) -> Bool
 pub fn GroupFieldError::to_repr(Self) -> @debug.Repr
 
+type GroupOwnedError
+
 pub(all) struct GroupReg[V] {
   token : Int
   dispatch_change : (V) -> Unit
   reset : () -> Unit
+  abort : () -> Unit
+  remap_owned : ((Key) -> Key?) -> Unit
 }
 
 pub struct GroupValidationResult {

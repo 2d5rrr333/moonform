@@ -145,8 +145,15 @@ pub fn[V] FormApi::handle_submit(
   }
   self.is_submitting = true
   self.subs.notify_all()
-  // field-level onSubmit validation across mounted fields
+  // field-level onSubmit validation across mounted fields. Snapshot: the
+  // validators notify, whose callbacks may mount/unmount fields and rekey
+  // the registries mid-loop — a lazy iteration could skip fields (an
+  // invalid form slipping through submission).
+  let ks : Array[Key] = []
   for k in self.field_regs.keys() {
+    ks.push(k)
+  }
+  for k in ks {
     match self.submit_validators.get(k) {
       Some(f) => f(self.values)
       None => ()

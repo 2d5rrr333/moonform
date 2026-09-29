@@ -35,6 +35,9 @@ pub(all) struct FieldReg[V] {
   /// Change-cause validation dispatcher (runs the mounted field's
   /// configured onChange validators against the new value).
   validate_on_change : ((V) -> Unit)?
+  /// Abort the owning field's in-flight async validation (reset /
+  /// unregister cleanup: completions must not land on removed state).
+  abort_async : () -> Unit
 }
 
 ///|
@@ -184,13 +187,7 @@ pub fn[V, A] FormApi::set_value(
   self.subs.notify(lens.key, Value)
   // dependency watches (upstream onChangeListenTo): fields listening to
   // this key re-validate on its change
-  match self.dep_watches.get(lens.key) {
-    Some(watchers) =>
-      for _owner, w in watchers {
-        w()
-      }
-    None => ()
-  }
+  self.run_dep_watches(lens.key)
   // change validation (upstream: validateField(field, 'change')), unless
   // suppressed — array ops orchestrate their own validation pass
   if !dont_validate.unwrap_or(false) {
@@ -214,6 +211,25 @@ pub fn[V, A] FormApi::set_value(
 }
 
 // -- derived state -----------------------------------------------------------
+
+///|
+/// Re-validate the fields watching `key` (upstream onChangeListenTo). The
+/// watcher set is snapshotted: watch closures notify subscribers, whose
+/// callbacks may mount/unmount fields and mutate the set mid-dispatch.
+fn[V] FormApi::run_dep_watches(self : FormApi[V], key : Key) -> Unit {
+  match self.dep_watches.get(key) {
+    Some(watchers) => {
+      let ws : Array[() -> Unit] = []
+      for _owner, w in watchers {
+        ws.push(w)
+      }
+      for w in ws {
+        w()
+      }
+    }
+    None => ()
+  }
+}
 
 ///|
 pub fn[V] FormApi::submission_attempts(self : FormApi[V]) -> Int {
@@ -356,6 +372,19 @@ pub fn[V] FormApi::reset(
   values? : V,
   keep_default_values? : Bool,
 ) -> Unit {
+  // abort in-flight async validation on mounted fields first: completions
+  // must not land on the freshly reset state. Snapshot — abort notifies,
+  // whose callbacks may mount/unmount fields mid-loop.
+  let fks : Array[Key] = []
+  for k in self.field_regs.keys() {
+    fks.push(k)
+  }
+  for k in fks {
+    match self.field_regs.get(k) {
+      Some(reg) => (reg.abort_async)()
+      None => ()
+    }
+  }
   // every existing meta entry resets to default meta (keys are kept)
   for k in self.meta.keys() {
     self.meta.set(k, FieldMetaState::default_meta())
@@ -389,9 +418,17 @@ pub fn[V] FormApi::reset(
   self.is_submit_successful = ds.is_submit_successful
   self.is_validating = ds.is_validating
   // mounted groups clear their own submission/error state (child field meta
-  // was already reset above)
-  for _k, reg in self.group_regs {
-    (reg.reset)()
+  // was already reset above). Snapshot: the group reset aborts in-flight
+  // async validation, which notifies — callbacks may mount/unmount groups.
+  let gks : Array[Key] = []
+  for k in self.group_regs.keys() {
+    gks.push(k)
+  }
+  for k in gks {
+    match self.group_regs.get(k) {
+      Some(reg) => (reg.reset)()
+      None => ()
+    }
   }
   self.subs.notify_all()
 }
@@ -406,6 +443,7 @@ fn[V, A : Eq] FormApi::register_field(
   on_change : ((A) -> Unit)?,
   validate_on_change : (V, A) -> Unit,
   validate_on_submit : (V, A) -> Unit,
+  abort_async : () -> Unit,
 ) -> Int {
   let token = self.next_field_token
   self.next_field_token = token + 1
@@ -454,13 +492,39 @@ fn[V, A : Eq] FormApi::register_field(
     probe_dirty,
     on_change: on_change_v,
     validate_on_change: validate_v,
+    abort_async,
   })
   token
 }
 
 ///|
 fn[V] FormApi::unregister_field(self : FormApi[V], key : Key) -> Unit {
+  // abort in-flight async validation BEFORE dropping the reg: a completion
+  // landing after removal would recreate meta for an unmounted field
+  match self.field_regs.get(key) {
+    Some(reg) => (reg.abort_async)()
+    None => ()
+  }
   let _ = self.field_regs.remove(key)
+  // the field's submit validator goes away with the registration — a
+  // stale validator would run on later submissions and materialize meta
+  let _ = self.submit_validators.remove(key)
+  // dependency-watch entries OWNED by this key go away wholesale
+  // (upstream onChangeListenTo cleanup); pure map surgery, no user code
+  for _dep, watchers in self.dep_watches {
+    let _ = watchers.remove(key)
+  }
+  // prune emptied watch sets
+  let deps : Array[Key] = []
+  for dep in self.dep_watches.keys() {
+    deps.push(dep)
+  }
+  for dep in deps {
+    match self.dep_watches.get(dep) {
+      Some(ws) => if ws.length() == 0 { let _ = self.dep_watches.remove(dep) }
+      None => ()
+    }
+  }
 }
 
 ///|

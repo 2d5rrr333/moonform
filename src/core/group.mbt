@@ -14,6 +14,25 @@ pub(all) struct GroupReg[V] {
   dispatch_change : (V) -> Unit
   /// Form-reset dispatch: clear the group's own submission/error state.
   reset : () -> Unit
+  /// Abort the group's in-flight async validation (unregister cleanup: a
+  /// completion landing after removal would write phantom state).
+  abort : () -> Unit
+  /// Array-op ownership migration: remap the group's distributed-error
+  /// records by a full-key remap function (see
+  /// `FormApi::remap_group_owned`).
+  remap_owned : ((Key) -> Key?) -> Unit
+}
+
+///|
+/// One distributed-error ownership record: the field's key RELATIVE to the
+/// group, the cause, and the exact error content distributed there.
+/// Clearing is compare-and-swap on the content — if another writer (the
+/// field's own validator, another group) replaced the slot since, their
+/// content wins and the group leaves it alone.
+struct GroupOwnedError {
+  cause : ValidationCause
+  key : Key
+  errors : Array[String]?
 }
 
 ///|
@@ -172,10 +191,10 @@ pub struct FormGroupApi[V, G] {
   // pending debounce timer handle
   mut async_seq : Int
   mut async_timer : Int?
-  /// (cause, relative key) pairs this group last distributed — a clean
-  /// re-validation for the cause clears those slots (upstream single-slot
-  /// replace semantics).
-  mut owned_field_errors : Array[(ValidationCause, Key)]
+  /// (cause, relative key, distributed content) records this group last
+  /// distributed — a clean re-validation for the cause clears those slots
+  /// (upstream single-slot replace semantics; CAS against the content).
+  mut owned_field_errors : Array[GroupOwnedError]
 }
 
 ///|
@@ -221,6 +240,15 @@ pub fn[V, G] FormApi::group(
 }
 
 ///|
+/// A previously-mounted instance that has been unmounted: its wiring is
+/// torn down (registration removed, in-flight async aborted) — later calls
+/// on the handle must not write state or notify (phantom errors).
+/// Never-mounted handles stay usable as pure lens + validation accessors.
+fn[V, G] FormGroupApi::is_dead(self : FormGroupApi[V, G]) -> Bool {
+  !self.mounted && self.mount_token is Some(_)
+}
+
+///|
 /// Register the group (upstream `group.mount()`): wires the form-level
 /// change dispatch, runs the onMount listener, then the group's onMount
 /// validation with error distribution. Distribution reaches fields that are
@@ -233,33 +261,80 @@ pub fn[V, G] FormGroupApi::mount(self : FormGroupApi[V, G]) -> Unit {
   let token = self.form.next_group_token
   self.form.next_group_token = token + 1
   let dispatch_change = (values : V) => {
-    match self.on_change_l {
-      Some(cb) => cb((self.lens.get)(values))
+    // stale array slot (the group's element was removed): skip the whole
+    // dispatch — lens.get would abort on the out-of-range index
+    match (self.lens.try_get)(values) {
       None => ()
-    }
-    // a change inside the group supersedes the group's onMount judgment —
-    // mirrors field-level set_value clearing Mount errors on write
-    if self.error_map.get(Mount) is Some(_) {
-      self.error_map = self.error_map.set(Mount, None)
-    }
-    self.run_validation_against(Change, values)
-    if self.validation.on_change_async is Some(_) {
-      self.schedule_async_validation()
+      Some(g) => {
+        match self.on_change_l {
+          Some(cb) => cb(g)
+          None => ()
+        }
+        // mid-listener unmount: stop — no validation, no async scheduling,
+        // no phantom errors on a dead instance
+        if !self.is_dead() {
+          // a change inside the group supersedes the group's onMount
+          // judgment — mirrors field-level set_value clearing Mount errors
+          // on write
+          if self.error_map.get(Mount) is Some(_) {
+            self.error_map = self.error_map.set(Mount, None)
+          }
+          self.run_validation_against(Change, values)
+          if self.validation.on_change_async is Some(_) {
+            self.schedule_async_validation()
+          }
+        }
+      }
     }
   }
   let reset = () => {
+    // in-flight async results must not land on the freshly reset state
+    self.abort_async_validation()
     self.error_map = ErrorMap::empty()
     self.submission_attempts = 0
     self.is_touched = false
     self.owned_field_errors = []
   }
-  self.form.group_regs.set(self.lens.key, { token, dispatch_change, reset, })
+  let abort = () => self.abort_async_validation()
+  let remap_owned = (f : (Key) -> Key?) => {
+    let kept : Array[GroupOwnedError] = []
+    for oe in self.owned_field_errors {
+      match f(self.lens.key.concat(oe.key)) {
+        None => () // the slot was removed: its meta is gone, drop the claim
+        Some(full) =>
+          // re-express the remapped full key relative to the group key
+          // (the group's own key does not move: only groups at/above the
+          // array prefix are remapped)
+          match full.strip_prefix(self.lens.key) {
+            Some(rel) => kept.push({ ..oe, key: rel, })
+            None => ()
+          }
+      }
+    }
+    self.owned_field_errors = kept
+  }
+  self.form.group_regs.set(self.lens.key, {
+    token,
+    dispatch_change,
+    reset,
+    abort,
+    remap_owned,
+  })
   self.mount_token = Some(token)
   match self.on_mount_l {
-    Some(cb) => cb((self.lens.get)(self.form.values))
+    Some(cb) =>
+      // stale array slot: skip the listener (lens.get would abort)
+      match (self.lens.try_get)(self.form.values) {
+        Some(g) => cb(g)
+        None => ()
+      }
     None => ()
   }
-  self.run_validation(Mount)
+  // the onMount listener may have unmounted the group: skip the Mount
+  // validation (no phantom errors on a dead instance)
+  if !self.is_dead() {
+    self.run_validation(Mount)
+  }
 }
 
 ///|
@@ -286,7 +361,12 @@ pub fn[V, G] FormGroupApi::unmount(self : FormGroupApi[V, G]) -> Unit {
       self.clear_owned_field_errors()
       self.error_map = ErrorMap::empty()
       match self.on_unmount_l {
-        Some(cb) => cb((self.lens.get)(self.form.values))
+        Some(cb) =>
+          // stale array slot: skip the listener (lens.get would abort)
+          match (self.lens.try_get)(self.form.values) {
+            Some(g) => cb(g)
+            None => ()
+          }
         None => ()
       }
     }
@@ -321,11 +401,22 @@ pub fn[V, G] FormGroupApi::set_value(
     Some(cb) => cb(value)
     None => ()
   }
-  self.run_validation(Change)
-  if self.validation.on_change_async is Some(_) {
-    self.schedule_async_validation()
+  // the onChange listener may have unmounted the group: stop — no
+  // validation, no async scheduling on a dead instance
+  if !self.is_dead() {
+    self.run_validation(Change)
+    if self.validation.on_change_async is Some(_) {
+      self.schedule_async_validation()
+    }
   }
   self.form.subs.notify(self.lens.key, Value)
+  // fields listening to this key re-validate (mirrors form-level writes)
+  self.form.run_dep_watches(self.lens.key)
+  // groups mounted strictly under this key dispatch on the write (nested
+  // groups: the write covered their whole subtree)
+  for gk in self.form.dispatch_nested_groups(self.lens.key) {
+    self.form.fire_on_change_group(gk)
+  }
   self.form.fire_on_change_group(self.lens.key)
 }
 
@@ -371,10 +462,20 @@ fn[V, G] FormGroupApi::run_validation_against(
     _ => None
   }
   match validator {
-    Some(v) => {
-      let result = (v.validate)((self.lens.get)(form_value), form_value)
-      self.apply_result(cause, result)
-    }
+    Some(v) =>
+      // stale array slot: skip (lens.get would abort on the index)
+      match (self.lens.try_get)(form_value) {
+        None => ()
+        Some(g) => {
+          let result = (v.validate)(g, form_value)
+          // the validator may have unmounted the group: discard the result
+          // (a dead instance must not record phantom errors; never-mounted
+          // handles keep pure-accessor validation)
+          if !self.is_dead() {
+            self.apply_result(cause, result)
+          }
+        }
+      }
     None => ()
   }
 }
@@ -382,7 +483,8 @@ fn[V, G] FormGroupApi::run_validation_against(
 ///|
 /// Apply a validation result: replace the group's own error slot, clear
 /// previously distributed slots for this cause that the result no longer
-/// lists, then distribute the new field errors. Slots are replaced, never
+/// lists (compare-and-swap on the content — another writer's replacement
+/// wins), then distribute the new field errors. Slots are replaced, never
 /// merged — overlapping writers on the same field cannot duplicate errors
 /// (upstream single-slot semantics).
 fn[V, G] FormGroupApi::apply_result(
@@ -396,8 +498,9 @@ fn[V, G] FormGroupApi::apply_result(
     None
   }
   self.error_map = self.error_map.set(cause, slot)
-  // distribute the result's field errors (relative keys -> full keys)
-  let fresh : Array[Key] = []
+  // distribute the result's field errors (relative keys -> full keys),
+  // remembering the exact content distributed per key
+  let fresh : Array[GroupOwnedError] = []
   for fe in result.field_errors {
     let field_slot : Array[String]? = if fe.errors.length() > 0 {
       Some(fe.errors.copy())
@@ -407,27 +510,37 @@ fn[V, G] FormGroupApi::apply_result(
     let full = self.lens.key.concat(fe.key)
     self.form.meta.update(full, m => m.with_cause_errors(cause, field_slot))
     self.form.subs.notify(full, Meta)
-    fresh.push(fe.key)
+    fresh.push({ cause, key: fe.key, errors: field_slot, })
   }
-  // clear stale distributed slots for this cause, keep the rest.
-  // Only entries that still exist are cleared — meta.update would INSERT
-  // a default entry for absent keys (a vacated array slot after an
-  // operation, or a field deleted via delete_field), breaking the
-  // "unmounted fields have no meta entry" contract.
-  let kept : Array[(ValidationCause, Key)] = []
-  for pair in self.owned_field_errors {
-    let (c, k) = pair
-    let re_listed = key_listed(fresh, k)
-    if c == cause && !re_listed {
-      self.clear_distributed_slot(cause, k)
+  // clear stale distributed records for this cause, keep the rest. Only
+  // entries that still exist are touched — clearing must never materialize
+  // a meta entry for absent keys (a vacated array slot, or a field deleted
+  // via delete_field), breaking the "unmounted fields have no meta entry"
+  // contract.
+  let mut kept : Array[GroupOwnedError] = []
+  for oe in self.owned_field_errors {
+    let re_listed = owned_key_listed(fresh, oe.key)
+    if oe.cause == cause && !re_listed {
+      self.clear_distributed_slot(oe)
     } else {
-      kept.push(pair)
+      kept.push(oe)
     }
   }
-  // register ownership of the freshly distributed keys
-  for fk in fresh {
-    if !owned_listed(kept, cause, fk) {
-      kept.push((cause, fk))
+  // register/refresh ownership of the freshly distributed keys
+  for foe in fresh {
+    if !owned_listed(kept, foe.cause, foe.key) {
+      kept.push(foe)
+    } else {
+      // re-listed: refresh the recorded content (single-slot replace)
+      let refreshed : Array[GroupOwnedError] = []
+      for oe in kept {
+        if oe.cause == cause && oe.key == foe.key {
+          refreshed.push(foe)
+        } else {
+          refreshed.push(oe)
+        }
+      }
+      kept = refreshed
     }
   }
   self.owned_field_errors = kept
@@ -435,10 +548,10 @@ fn[V, G] FormGroupApi::apply_result(
 }
 
 ///|
-fn key_listed(keys : Array[Key], k : Key) -> Bool {
+fn owned_key_listed(records : Array[GroupOwnedError], k : Key) -> Bool {
   let mut hit = false
-  for x in keys {
-    if x == k {
+  for oe in records {
+    if oe.key == k {
       hit = true
     }
   }
@@ -447,14 +560,13 @@ fn key_listed(keys : Array[Key], k : Key) -> Bool {
 
 ///|
 fn owned_listed(
-  owned : Array[(ValidationCause, Key)],
+  records : Array[GroupOwnedError],
   cause : ValidationCause,
   k : Key,
 ) -> Bool {
   let mut hit = false
-  for pair in owned {
-    let (c, x) = pair
-    if c == cause && x == k {
+  for oe in records {
+    if oe.cause == cause && oe.key == k {
       hit = true
     }
   }
@@ -464,31 +576,34 @@ fn owned_listed(
 ///|
 /// Clear every field slot this group distributed (unmount cleanup).
 /// Absent keys are skipped — clearing must never materialize a meta
-/// entry (see apply_result).
+/// entry (see apply_result); slots another writer replaced keep that
+/// writer's content (CAS, see clear_distributed_slot).
 fn[V, G] FormGroupApi::clear_owned_field_errors(
   self : FormGroupApi[V, G],
 ) -> Unit {
-  for pair in self.owned_field_errors {
-    let (c, k) = pair
-    self.clear_distributed_slot(c, k)
+  for oe in self.owned_field_errors {
+    self.clear_distributed_slot(oe)
   }
   self.owned_field_errors = []
 }
 
 ///|
-/// Clear one distributed cause slot for relative key `k` — a no-op when
-/// the target entry no longer exists (vacated array slot / deleted field).
+/// Clear one distributed record — a no-op when the target entry no longer
+/// exists (vacated array slot / deleted field). CAS: the slot is cleared
+/// only while it still holds the exact content this group distributed —
+/// if another writer (the field's own validator, another group) replaced
+/// it, their content wins and stays.
 fn[V, G] FormGroupApi::clear_distributed_slot(
   self : FormGroupApi[V, G],
-  cause : ValidationCause,
-  k : Key,
+  oe : GroupOwnedError,
 ) -> Unit {
-  let full = self.lens.key.concat(k)
+  let full = self.lens.key.concat(oe.key)
   match self.form.meta.get(full) {
-    Some(_) => {
-      self.form.meta.update(full, m => m.with_cause_errors(cause, None))
-      self.form.subs.notify(full, Meta)
-    }
+    Some(m) =>
+      if m.error_map.get(oe.cause) == oe.errors {
+        self.form.meta.update(full, m2 => m2.with_cause_errors(oe.cause, None))
+        self.form.subs.notify(full, Meta)
+      }
     None => ()
   }
 }
@@ -523,16 +638,22 @@ pub fn[V, G] FormGroupApi::schedule_async_validation(
   let form = self.form
   let launch = () => {
     self.async_timer = None
-    self.set_validating(true)
-    let form_value = form.values
-    let group_value = (self.lens.get)(form_value)
-    (validator.validate)(group_value, form_value, clock, result => {
-      if run == self.async_seq {
-        // latest run: apply the result (stale runs are discarded)
-        self.apply_result(Change, result)
-        self.set_validating(false)
+    // stale array slot: skip the run (lens.get would abort on the index)
+    match (self.lens.try_get)(form.values) {
+      None => ()
+      Some(group_value) => {
+        self.set_validating(true)
+        let form_value = form.values
+        (validator.validate)(group_value, form_value, clock, result => {
+          if run == self.async_seq && !self.is_dead() {
+            // latest run on a live group: apply the result (stale runs and
+            // dead groups are discarded)
+            self.apply_result(Change, result)
+            self.set_validating(false)
+          }
+        })
       }
-    })
+    }
   }
   let debounce = self.validation.on_change_async_debounce_ms
   if debounce > 0 {
@@ -703,8 +824,14 @@ pub fn[V, G] FormGroupApi::handle_submit(
     invalid()
     return
   }
-  // child fields' onSubmit validators (mounted fields under the group only)
+  // child fields' onSubmit validators (mounted fields under the group
+  // only). Snapshot: the validators notify, whose callbacks may
+  // mount/unmount fields and rekey the registries mid-loop.
+  let ks : Array[Key] = []
   for k in self.form.field_regs.keys() {
+    ks.push(k)
+  }
+  for k in ks {
     if k.has_prefix(self.lens.key) {
       match self.form.submit_validators.get(k) {
         Some(f) => f(self.form.values)
@@ -712,16 +839,62 @@ pub fn[V, G] FormGroupApi::handle_submit(
       }
     }
   }
+  // the field validators may have unmounted the group: a dead group does
+  // not submit
+  if self.is_dead() {
+    return
+  }
   // the group's own onSubmit validation re-runs (its distribution replaces
   // / clears previously distributed field slots)
   self.run_validation(Submit)
+  if self.is_dead() {
+    return // the validator itself may have unmounted the group
+  }
   if !self.is_valid() {
     invalid()
     return
   }
   match on_group_submit {
-    Some(f) => f((self.lens.get)(self.form.values), meta)
+    Some(f) =>
+      // stale array slot: skip the callback (lens.get would abort)
+      match (self.lens.try_get)(self.form.values) {
+        Some(g) => f(g, meta)
+        None => ()
+      }
     None => ()
+  }
+}
+
+// -- array-op ownership migration ---------------------------------------------
+
+///|
+/// Keep mounted groups' distributed-error ownership in sync with an array
+/// operation's meta remap: for every group whose key is the array key or an
+/// ancestor of it (those groups' own keys do not move), owned records
+/// follow the same shift/drop — otherwise a later clean re-validation could
+/// never clear errors the remap moved (permanent orphans blocking
+/// submission), or would clear a slot another writer's remapped content now
+/// occupies. Groups mounted UNDER an array element keep their (now stale)
+/// records: the structural-change contract has adapters re-mount them.
+fn[V] FormApi::remap_group_owned(
+  self : FormApi[V],
+  prefix : Key,
+  shift : (Int) -> Int,
+  drop : (Int) -> Bool,
+) -> Unit {
+  let f = (k : Key) => remap_key(k, prefix, shift, drop)
+  let ks : Array[Key] = []
+  for k in self.group_regs.keys() {
+    ks.push(k)
+  }
+  for k in ks {
+    // the group key is the array key or an ancestor of it
+    if prefix.has_prefix(k) {
+      match self.group_regs.get(k) {
+        Some(reg) => (reg.remap_owned)(f)
+        None => ()
+      }
+    }
   }
 }
 

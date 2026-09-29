@@ -146,6 +146,44 @@ fn[Meta] remap_under(
 }
 
 ///|
+/// Remap one key's first index segment after `prefix` (None when the slot
+/// is dropped). Keys not under `prefix` (whole-segment match) map to
+/// themselves, as does the array field's own entry.
+fn remap_key(
+  k : Key,
+  prefix : Key,
+  shift : (Int) -> Int,
+  drop : (Int) -> Bool,
+) -> Key? {
+  match k.strip_prefix(prefix) {
+    None => Some(k)
+    Some(rest) =>
+      if rest.segs.length() == 0 {
+        Some(k) // the array field itself: keep
+      } else {
+        match rest.segs[0] {
+          Idx(j) =>
+            if drop(j) {
+              None // removed slot: dropped
+            } else {
+              let nj = shift(j)
+              if nj == j {
+                Some(k)
+              } else {
+                Some(
+                  prefix
+                  .push_idx(nj)
+                  .concat(Key::from_segs(tail_from(rest.segs, 1))),
+                )
+              }
+            }
+          _ => Some(k) // non-index child directly under prefix: keep
+        }
+      }
+  }
+}
+
+///|
 fn[Meta] remap_entry(
   out : Map[Key, Meta],
   k : Key,
@@ -154,29 +192,9 @@ fn[Meta] remap_entry(
   shift : (Int) -> Int,
   drop : (Int) -> Bool,
 ) -> Unit {
-  match k.strip_prefix(prefix) {
-    None => out.set(k, v)
-    Some(rest) =>
-      if rest.segs.length() == 0 {
-        // the array field itself: keep
-        out.set(k, v)
-      } else {
-        match rest.segs[0] {
-          Idx(j) =>
-            if drop(j) {
-              () // removed slot: drop meta
-            } else {
-              let nj = shift(j)
-              if nj == j {
-                out.set(k, v)
-              } else {
-                let rest2 = Key::from_segs(tail_from(rest.segs, 1))
-                out.set(prefix.push_idx(nj).concat(rest2), v)
-              }
-            }
-          _ => out.set(k, v) // non-index child directly under prefix: keep
-        }
-      }
+  match remap_key(k, prefix, shift, drop) {
+    None => () // removed slot: drop meta
+    Some(nk) => out.set(nk, v)
   }
 }
 
