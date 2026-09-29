@@ -5,6 +5,70 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.5] - 2026-09-29
+
+### Fixed
+
+A full reentrancy/staleness audit of the group and array-op paths (the
+field-side guards from 0.8.x had no group-side counterparts):
+
+- **Stale-index abort on groups (crash)**: every group-side `lens.get` —
+  change dispatch, mount/unmount listeners, sync and async validation,
+  group submission — read the raw array index and aborted on js when the
+  group's element had been removed. All paths now read through
+  `Lens::try_get` and skip the stale slot (mirrors the field-side fix)
+- **Out-of-range array-op indices corrupted the meta layout**: `remove`
+  with a negative index shifted every slot's meta onto phantom keys while
+  values stayed unchanged; `remove` beyond the end deleted the last live
+  element's meta; `swap` with one bad index exiled a slot's subtree to a
+  phantom key; `move` from an out-of-range source shifted all meta up.
+  All four are now full no-ops (values AND meta), and `move` clamps `to`
+  to the array bounds so the meta remap lands where the element does
+  (insert already clamped)
+- **Distributed-error ownership never migrated with array remaps**: a
+  group's owned records kept pre-operation indices after remove/insert/
+  swap/move, so (a) errors the remap moved became permanent orphans —
+  `is_fields_valid` stayed false forever and the group could never submit
+  again — and (b) the clear on a clean re-validation could wipe a
+  different writer's error that the remap re-seated onto an owned key.
+  Records now follow the same shift/drop as the meta, and clearing is
+  compare-and-swap on the distributed content: another writer's
+  replacement wins and stays
+- **Lazy iteration over live maps ran user callbacks**: the group
+  dispatch, the dep-watch dispatch, and both submit loops (form and
+  group) iterated `Map::keys()` while validators/listeners/subscriber
+  callbacks could mount/unmount fields and groups mid-loop — silently
+  skipping or repeating entries (a skipped submit validator could let an
+  invalid form through). All four paths iterate snapshots now
+- **Phantom state after mid-notify unmounts**: `FieldApi::set_value` /
+  `handle_blur` / `mount` and the group dispatch / `set_value` / `mount` /
+  `handle_submit` kept scheduling validation and async runs on instances
+  that user code had unmounted mid-notification — the fresh async run
+  passed the race guard and landed errors and validating flags on the
+  dead instance. All continuation points re-check liveness (dead =
+  previously mounted, since unmounted; never-mounted handles keep
+  pure-accessor semantics)
+- **`form.reset` resurrected in-flight async validation**: neither the
+  field nor the group side aborted pending runs, so completions landed
+  errors on the freshly reset state once the clock advanced. Field regs
+  gain an `abort_async` closure; the group reset aborts first
+- **`group.set_value` never dispatched nested groups**: a group write
+  covered the nested groups' whole subtree but only ran the writing
+  group's own validation — nested onChange listeners, change validation
+  and error distribution all stayed stale, and dependency watches never
+  fired. Nested groups (keys extending the written key) now dispatch, in
+  addition to the fields' dep watches
+- **`unregister_field` leaked the field's submit validator**: an
+  unmounted field's onSubmit validator kept running on every later
+  submission (and could materialize meta for the dead field). It is now
+  removed together with the registration and the dependency watches
+
+### Tests
+
+- 338 tests on js, 314 on wasm (+16: array-op guard, ownership-migration,
+  CAS-clear, stale-group, reentrancy, reset-abort, nested-dispatch,
+  submit-cleanup regressions)
+
 ## [0.8.4] - 2026-09-25
 
 ### Added

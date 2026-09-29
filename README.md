@@ -194,8 +194,8 @@ FormGroup 分步表单，无头浏览器全部检查通过）：[web/](web/READM
 ## 测试与验收
 
 ```bash
-moon test --target js      # 322 tests（含上游译文 + 文档测试）
-moon test --target wasm    # 298 tests
+moon test --target js      # 338 tests（含上游译文 + 文档测试）
+moon test --target wasm    # 314 tests
 moon test --target native  # CI 已验证（GitHub Actions 五作业全绿）
 moon run src/examples/login --target js   # 示例验收
 ```
