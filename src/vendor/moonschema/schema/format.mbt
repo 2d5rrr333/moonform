@@ -19,9 +19,12 @@ fn is_hex_digit(c : Char) -> Bool {
 ///|
 /// 简化版 email 检查：恰好一个 `@`，两端非空、无空白，domain 至少一个点。
 /// （完整的 RFC 5322 语法验证不在 v0 目标内。）
+/// 修复（moonform vendor）：`String::length()` 是 UTF-16 单元数而
+/// `to_array()` 是码点数组——增补平面字符（emoji）会使下标越界；
+/// 现统一按码点遍历。
 fn is_email(s : String) -> Bool {
-  let n = s.length()
   let chars = s.to_array()
+  let n = chars.length()
   let mut at = -1
   for i in 0..<n {
     let c = chars[i]
@@ -50,11 +53,12 @@ fn is_email(s : String) -> Bool {
 }
 
 ///|
+/// 修复（moonform vendor）：同 is_email——长度与下标统一按码点。
 fn is_uuid(s : String) -> Bool {
-  if s.length() != 36 {
+  let chars = s.to_array()
+  if chars.length() != 36 {
     return false
   }
-  let chars = s.to_array()
   for i in 0..<36 {
     let c = chars[i]
     if i == 8 || i == 13 || i == 18 || i == 23 {

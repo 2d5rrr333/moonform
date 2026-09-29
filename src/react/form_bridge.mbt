@@ -51,7 +51,10 @@ fn[V] build_form_snapshot(form : @core.FormApi[V], rev : Int) -> FormState {
     is_submitting: form.is_submitting(),
     is_submitted: form.is_submitted(),
     is_submit_successful: form.is_submit_successful(),
-    is_validating: form.is_validating(),
+    // the LIVE validating signal (field meta + in-flight group asyncs) —
+    // `is_validating` alone is only the default-state overlay and would
+    // never light up during real validation
+    is_validating: form.is_validating_any(),
     is_valid_fields: form.is_valid_fields(),
     can_submit: form.can_submit(),
     is_touched: form.is_touched(),
@@ -63,12 +66,19 @@ fn[V] build_form_snapshot(form : @core.FormApi[V], rev : Int) -> FormState {
 }
 
 ///|
+/// Rebuild the snapshot from the core WITHOUT notifying React — used on
+/// attach so a re-attached bridge reads fresh state (the core may have
+/// changed while detached).
+fn[V] FormBridge::rebuild(self : FormBridge[V]) -> Unit {
+  self.snapshot = build_form_snapshot(self.form, self.snapshot.rev + 1)
+}
+
+///|
 /// Refresh the snapshot from the core (bumps rev) and notify React that
 /// the store changed (schedules a re-render). Called on every core
 /// notification.
 pub fn[V] FormBridge::refresh(self : FormBridge[V]) -> Unit {
-  let next_rev = self.snapshot.rev + 1
-  self.snapshot = build_form_snapshot(self.form, next_rev)
+  self.rebuild()
   match self.notify {
     Some(cb) => cb()
     None => ()
@@ -90,11 +100,15 @@ pub fn[V] FormBridge::form(self : FormBridge[V]) -> @core.FormApi[V] {
 ///|
 /// Subscribe the bridge to every core notification WITHOUT a React notify
 /// callback (headless mode; refreshes snapshots only). For React wiring
-/// prefer `attach_with_notify`.
+/// prefer `attach_with_notify`. Re-attaching rebuilds the snapshot — the
+/// core may have changed while detached.
 pub fn[V] FormBridge::attach(self : FormBridge[V]) -> Unit {
   match self.sub_id {
     Some(_) => () // already attached
-    None => self.sub_id = Some(self.form.subscribe(() => self.refresh()))
+    None => {
+      self.sub_id = Some(self.form.subscribe(() => self.refresh()))
+      self.rebuild()
+    }
   }
 }
 

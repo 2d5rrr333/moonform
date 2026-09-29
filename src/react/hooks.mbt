@@ -9,18 +9,28 @@
 
 ///|
 /// The per-component hook state: wraps a bridge bound to one field.
-pub struct FieldBridgeHook[V, A] {
+pub(all) struct FieldBridgeHook[V, A] {
   bridge : FieldBridge[V, A]
+  /// Stable subscribe function (identity survives every render — React's
+  /// external-store contract: an unstable identity would re-subscribe on
+  /// every render, opening detach windows where changes are missed).
+  subscribe_fn : (() -> Unit) -> () -> Unit
 }
 
 ///|
 /// Build a hook handle for a field (call once per component setup, e.g.
 /// with `use_memo_deps` or a ref). The returned handle drives
 /// `use_sync_external_store`.
-pub fn[V, A] use_field_handle(
+pub fn[V, A : Eq] use_field_handle(
   bridge : FieldBridge[V, A],
 ) -> FieldBridgeHook[V, A] {
-  { bridge, }
+  {
+    bridge,
+    subscribe_fn: notify => {
+      bridge.attach_with_notify(notify)
+      () => bridge.detach()
+    },
+  }
 }
 
 ///|
@@ -31,8 +41,7 @@ pub fn[V, A] FieldBridgeHook::subscribe(
   self : FieldBridgeHook[V, A],
   notify : () -> Unit,
 ) -> () -> Unit {
-  self.bridge.attach_with_notify(notify)
-  () => self.bridge.detach()
+  (self.subscribe_fn)(notify)
 }
 
 ///|

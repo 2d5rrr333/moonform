@@ -114,6 +114,10 @@ test "non_blank rejects whitespace-only strings" {
   assert_eq(@core.Validator::run(r, "", dummy()), ["Must not be blank"])
   assert_eq(@core.Validator::run(r, "   ", dummy()), ["Must not be blank"])
   assert_eq(@core.Validator::run(r, " \t\n ", dummy()), ["Must not be blank"])
+  // CJK ideographic space and no-break space are blank too
+  assert_eq(@core.Validator::run(r, "\u{3000}", dummy()), ["Must not be blank"])
+  assert_eq(@core.Validator::run(r, "\u{00A0}", dummy()), ["Must not be blank"])
+  assert_eq(@core.Validator::run(r, "\u{3000}x\u{3000}", dummy()), [])
 }
 
 ///|
@@ -124,6 +128,23 @@ test "numeric accepts integers with optional sign" {
   assert_eq(@core.Validator::run(r, "12a", dummy()), ["Must be a number"])
   assert_eq(@core.Validator::run(r, "1-2", dummy()), ["Must be a number"])
   assert_eq(@core.Validator::run(r, "", dummy()), ["Must be a number"])
+  // a bare sign is not a number (at least one digit required)
+  assert_eq(@core.Validator::run(r, "-", dummy()), ["Must be a number"])
+}
+
+///|
+test "min_length / max_length count unicode codepoints" {
+  let min : @core.Validator[String, DummyForm] = @rules.min_length(2)
+  // one emoji = one character (a UTF-16-unit count would see 2)
+  assert_eq(@core.Validator::run(min, "🙂", dummy()), [
+    "Must be at least 2 characters",
+  ])
+  assert_eq(@core.Validator::run(min, "🙂x", dummy()), [])
+  let max : @core.Validator[String, DummyForm] = @rules.max_length(1)
+  assert_eq(@core.Validator::run(max, "🙂", dummy()), [])
+  assert_eq(@core.Validator::run(max, "🙂x", dummy()), [
+    "Must be at most 1 characters",
+  ])
 }
 
 ///|

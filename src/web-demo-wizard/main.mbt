@@ -235,37 +235,32 @@ fn wizard_component(props : WizFinish) -> @react.VirtualNode {
   // subscribe bridges through React's external-store contract so this
   // component re-renders when field or group state changes
   ignore(
-    @react.use_sync_external_store(
-      notify => st.username_handle.subscribe(notify),
-      () => st.username_handle.get_snapshot(),
-    ),
+    @react.use_sync_external_store(st.username_handle.subscribe_fn, () => {
+      st.username_handle.get_snapshot()
+    }),
   )
   ignore(
-    @react.use_sync_external_store(
-      notify => st.email_handle.subscribe(notify),
-      () => st.email_handle.get_snapshot(),
-    ),
+    @react.use_sync_external_store(st.email_handle.subscribe_fn, () => {
+      st.email_handle.get_snapshot()
+    }),
   )
   ignore(
-    @react.use_sync_external_store(
-      notify => st.nickname_handle.subscribe(notify),
-      () => st.nickname_handle.get_snapshot(),
-    ),
+    @react.use_sync_external_store(st.nickname_handle.subscribe_fn, () => {
+      st.nickname_handle.get_snapshot()
+    }),
   )
   ignore(
-    @react.use_sync_external_store(
-      notify => st.step1_handle.subscribe(notify),
-      () => st.step1_handle.get_snapshot(),
-    ),
+    @react.use_sync_external_store(st.step1_handle.subscribe_fn, () => {
+      st.step1_handle.get_snapshot()
+    }),
   )
   ignore(
-    @react.use_sync_external_store(
-      notify => st.step2_handle.subscribe(notify),
-      () => st.step2_handle.get_snapshot(),
-    ),
+    @react.use_sync_external_store(st.step2_handle.subscribe_fn, () => {
+      st.step2_handle.get_snapshot()
+    }),
   )
   ignore(
-    @react.use_sync_external_store(notify => st.form_handle.subscribe(notify), () => {
+    @react.use_sync_external_store(st.form_handle.subscribe_fn, () => {
       st.form_handle.get_snapshot()
     }),
   )

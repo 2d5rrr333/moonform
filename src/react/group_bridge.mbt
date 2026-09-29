@@ -11,7 +11,10 @@
 /// notifies (any change under the group's key), identity-stable between
 /// notifications.
 pub struct GroupState[G] {
-  /// Current group value.
+  /// Current group value. After a structural array change removed the
+  /// group's element, this keeps the last live value (the group's lens
+  /// address is stale — the structural-change contract has adapters
+  /// re-mount per slot).
   value : G
   /// Group-level error messages (the group's own slots, lifecycle order;
   /// child field errors live on the fields).
@@ -47,7 +50,7 @@ pub fn[V, G] GroupBridge::make(
 ) -> GroupBridge[V, G] {
   {
     group,
-    snapshot: build_group_snapshot(group, 0),
+    snapshot: build_group_snapshot(group, 0, group.try_value()),
     sub_id: None,
     notify: None,
   }
@@ -57,9 +60,20 @@ pub fn[V, G] GroupBridge::make(
 fn[V, G] build_group_snapshot(
   group : @core.FormGroupApi[V, G],
   rev : Int,
+  stale_fallback : G?,
 ) -> GroupState[G] {
+  // stale array slot: keep the last live value (never abort on the
+  // out-of-range index — the core's try_value contract)
+  let value = match group.try_value() {
+    Some(v) => v
+    None =>
+      match stale_fallback {
+        Some(v) => v
+        None => group.value() // never stale at construction
+      }
+  }
   {
-    value: group.value(),
+    value,
     errors: group.errors(),
     is_touched: group.is_touched(),
     is_fields_valid: group.is_fields_valid(),
@@ -73,12 +87,23 @@ fn[V, G] build_group_snapshot(
 }
 
 ///|
+/// Rebuild the snapshot from the core WITHOUT notifying React — used on
+/// attach so a re-attached bridge reads fresh state (the core may have
+/// changed while detached).
+fn[V, G] GroupBridge::rebuild(self : GroupBridge[V, G]) -> Unit {
+  self.snapshot = build_group_snapshot(
+    self.group,
+    self.snapshot.rev + 1,
+    Some(self.snapshot.value),
+  )
+}
+
+///|
 /// Refresh the snapshot from the core (bumps rev) and notify React that
 /// the store changed (schedules a re-render). Called on every core
 /// notification under the group's key.
 pub fn[V, G] GroupBridge::refresh(self : GroupBridge[V, G]) -> Unit {
-  let next_rev = self.snapshot.rev + 1
-  self.snapshot = build_group_snapshot(self.group, next_rev)
+  self.rebuild()
   match self.notify {
     Some(cb) => cb()
     None => ()
@@ -102,11 +127,12 @@ pub fn[V, G] GroupBridge::group(
 ///|
 /// Subscribe the bridge to every change under the group's key WITHOUT a
 /// React notify callback (headless mode; refreshes snapshots only). For
-/// React wiring prefer `attach_with_notify`.
+/// React wiring prefer `attach_with_notify`. Re-attaching rebuilds the
+/// snapshot — the core may have changed while detached.
 pub fn[V, G] GroupBridge::attach(self : GroupBridge[V, G]) -> Unit {
   match self.sub_id {
     Some(_) => () // already attached
-    None =>
+    None => {
       self.sub_id = Some(
         self.group.form.subscribe_under(
           self.group.key(),
@@ -114,6 +140,8 @@ pub fn[V, G] GroupBridge::attach(self : GroupBridge[V, G]) -> Unit {
           () => self.refresh(),
         ),
       )
+      self.rebuild()
+    }
   }
 }
 

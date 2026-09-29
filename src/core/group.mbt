@@ -365,6 +365,10 @@ pub fn[V, G] FormGroupApi::unmount(self : FormGroupApi[V, G]) -> Unit {
       let _ = self.form.group_regs.remove(self.lens.key)
       self.clear_owned_field_errors()
       self.error_map = ErrorMap::empty()
+      // the group's own state changed (error slots cleared, registration
+      // gone): prefix subscribers (GroupBridge snapshots) must see it —
+      // mirrors the field unmount notification
+      self.form.subs.notify(self.lens.key, Meta)
       match self.on_unmount_l {
         Some(cb) =>
           // stale array slot: skip the listener (lens.get would abort)
@@ -383,6 +387,15 @@ pub fn[V, G] FormGroupApi::unmount(self : FormGroupApi[V, G]) -> Unit {
 /// The group's current value.
 pub fn[V, G] FormGroupApi::value(self : FormGroupApi[V, G]) -> G {
   (self.lens.get)(self.form.values)
+}
+
+///|
+/// Safe read of the group's current value: None when the group's lens
+/// addresses an array slot that no longer exists (the group's element was
+/// removed). Adapters rebuilding snapshots after structural changes read
+/// through this instead of `value` (which requires the slot to exist).
+pub fn[V, G] FormGroupApi::try_value(self : FormGroupApi[V, G]) -> G? {
+  (self.lens.try_get)(self.form.values)
 }
 
 ///|

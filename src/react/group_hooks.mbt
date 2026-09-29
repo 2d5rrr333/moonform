@@ -5,8 +5,12 @@
 
 ///|
 /// The per-component hook state: wraps a bridge bound to one group.
-pub struct GroupBridgeHook[V, G] {
+pub(all) struct GroupBridgeHook[V, G] {
   bridge : GroupBridge[V, G]
+  /// Stable subscribe function (identity survives every render — React's
+  /// external-store contract: an unstable identity would re-subscribe on
+  /// every render, opening detach windows where changes are missed).
+  subscribe_fn : (() -> Unit) -> () -> Unit
 }
 
 ///|
@@ -16,7 +20,13 @@ pub struct GroupBridgeHook[V, G] {
 pub fn[V, G] use_group_handle(
   bridge : GroupBridge[V, G],
 ) -> GroupBridgeHook[V, G] {
-  { bridge, }
+  {
+    bridge,
+    subscribe_fn: notify => {
+      bridge.attach_with_notify(notify)
+      () => bridge.detach()
+    },
+  }
 }
 
 ///|
@@ -27,8 +37,7 @@ pub fn[V, G] GroupBridgeHook::subscribe(
   self : GroupBridgeHook[V, G],
   notify : () -> Unit,
 ) -> () -> Unit {
-  self.bridge.attach_with_notify(notify)
-  () => self.bridge.detach()
+  (self.subscribe_fn)(notify)
 }
 
 ///|

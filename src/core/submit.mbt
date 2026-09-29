@@ -91,7 +91,12 @@ pub fn[V] FormApi::can_submit(self : FormApi[V]) -> Bool {
 }
 
 ///|
-fn[V] FormApi::is_validating_any(self : FormApi[V]) -> Bool {
+/// Is any validation in flight — a field's async validation (per-field
+/// meta) or a group's (the form-level in-flight count)? The live signal
+/// for form-level "validating" UI (upstream tracks one form-level
+/// isValidating across all async validators); `FormApi::is_validating`
+/// is only the default-state overlay.
+pub fn[V] FormApi::is_validating_any(self : FormApi[V]) -> Bool {
   // in-flight async GROUP validation blocks submission the same way field
   // validation does (upstream tracks one form-level isValidating counter
   // across every async validator)
@@ -177,7 +182,14 @@ pub fn[V] FormApi::handle_submit(
   // form-level submit listener then handler
   match opts.on_submit {
     Some(handler) => {
+      // identity of THIS submission: a reset or a newer submission bumps
+      // the form's counter, superseding an async completion
+      let my_seq = self.submit_seq + 1
+      self.submit_seq = my_seq
       let finish = (result : SubmitResult) => {
+        if self.submit_seq != my_seq {
+          return // superseded by a reset or a newer submission
+        }
         match result {
           Ok => {
             self.is_submitting = false

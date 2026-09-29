@@ -94,9 +94,10 @@ test "group bridge: changes outside the group do not refresh" {
   group.mount()
   let bridge = @react.GroupBridge::make(group)
   bridge.attach()
+  let base_rev = bridge.state().rev // the attach rebuild bumped it once
   form.set_value(gs_other_l(), "x")
   let s = bridge.state()
-  assert_eq(s.rev, 0) // untouched: the change was outside the group
+  assert_eq(s.rev, base_rev) // untouched: the change was outside the group
   bridge.detach()
 }
 

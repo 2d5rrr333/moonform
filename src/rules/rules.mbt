@@ -20,17 +20,29 @@ pub fn[V] required_array(
 }
 
 ///|
-/// Minimum string length (inclusive).
+/// Minimum string length (inclusive), counting CHARACTERS (unicode
+/// codepoints — an emoji counts as one, matching the schema engine's
+/// minLength semantics; `String::length()` would count UTF-16 units).
 pub fn[V] min_length(n : Int, message? : String) -> @core.Validator[String, V] {
   let msg = message.unwrap_or("Must be at least \{n} characters")
-  @core.validator(v => if v.length() < n { [msg] } else { [] })
+  @core.validator(v => if count_codepoints(v) < n { [msg] } else { [] })
 }
 
 ///|
-/// Maximum string length (inclusive).
+/// Maximum string length (inclusive), counting CHARACTERS (unicode
+/// codepoints — see min_length).
 pub fn[V] max_length(n : Int, message? : String) -> @core.Validator[String, V] {
   let msg = message.unwrap_or("Must be at most \{n} characters")
-  @core.validator(v => if v.length() > n { [msg] } else { [] })
+  @core.validator(v => if count_codepoints(v) > n { [msg] } else { [] })
+}
+
+///|
+fn count_codepoints(s : String) -> Int {
+  let mut n = 0
+  for _c in s {
+    n = n + 1
+  }
+  n
 }
 
 ///|
@@ -115,13 +127,14 @@ pub fn[V] must_be_true(message? : String) -> @core.Validator[Bool, V] {
 
 ///|
 /// Trimmed string must be non-blank (rejects "   " where required()
-/// accepts it only for "").
+/// accepts it only for ""). Blank = the common ASCII whitespace plus
+/// U+00A0 (no-break space) and U+3000 (ideographic space — CJK input).
 pub fn[V] non_blank(message? : String) -> @core.Validator[String, V] {
   let msg = message.unwrap_or("Must not be blank")
   @core.validator(v => {
     let mut all_space = true
     for ch in v {
-      if ch != ' ' && ch != '\t' && ch != '\n' && ch != '\r' {
+      if !is_blank_char(ch) {
         all_space = false
       }
     }
@@ -134,8 +147,21 @@ pub fn[V] non_blank(message? : String) -> @core.Validator[String, V] {
 }
 
 ///|
-/// Numeric string check (digits, optional leading '-') — dependency-free
-/// stand-in for full number parsing.
+fn is_blank_char(ch : Char) -> Bool {
+  ch == ' ' ||
+  ch == '\t' ||
+  ch == '\n' ||
+  ch == '\r' ||
+  ch == '\u{000B}' ||
+  ch == '\u{000C}' ||
+  ch == '\u{00A0}' ||
+  ch == '\u{3000}'
+}
+
+///|
+/// Numeric string check (digits, optional leading '-'; a bare '-' is NOT
+/// numeric — at least one digit is required) — dependency-free stand-in
+/// for full number parsing.
 pub fn[V] numeric(message? : String) -> @core.Validator[String, V] {
   let msg = message.unwrap_or("Must be a number")
   @core.validator(v => {
@@ -144,15 +170,19 @@ pub fn[V] numeric(message? : String) -> @core.Validator[String, V] {
     }
     let mut i = 0
     let mut ok = true
+    let mut digits = 0
     for ch in v {
       let digit = ch >= '0' && ch <= '9'
+      if digit {
+        digits = digits + 1
+      }
       let sign = i == 0 && ch == '-'
       if !(digit || sign) {
         ok = false
       }
       i = i + 1
     }
-    if ok {
+    if ok && digits > 0 {
       []
     } else {
       [msg]
@@ -162,7 +192,8 @@ pub fn[V] numeric(message? : String) -> @core.Validator[String, V] {
 
 ///|
 /// Pragmatic email check: exactly one '@', non-empty local part, a dot in
-/// a non-empty domain with a non-empty TLD (user@a.b). Not RFC-complete —
+/// a non-empty domain with a TLD of at least two characters (user@ab.cd
+/// — single-letter TLDs do not exist in practice). Not RFC-complete —
 /// use a custom closure validator when you need stricter semantics.
 pub fn[V] email(message? : String) -> @core.Validator[String, V] {
   let msg = message.unwrap_or("Invalid email address")

@@ -118,12 +118,14 @@ test "strict: bridge attach-detach-attach resubscribes cleanly" {
   bridge.detach()
   bridge.set_value("b") // detached: snapshot stays stale by contract
   assert_eq(bridge.state().value, "a")
-  bridge.attach() // re-attach: subscription live again
+  bridge.attach() // re-attach: subscription live AND snapshot rebuilt
+  // the re-attach rebuild reads fresh state — the "b" write made it in
+  assert_eq(bridge.state().value, "b")
   bridge.set_value("c")
   assert_eq(bridge.state().value, "c")
-  // rev: 1 (the "a" refresh while attached) + 2 (the "c" refresh after
-  // re-attach) — the detached "b" write never refreshed, per contract
-  assert_eq(bridge.state().rev, 2)
+  // rev: 1 (the attach rebuild) + 2 (the "a" refresh) + 3 (the re-attach
+  // rebuild reading "b") + 4 (the "c" refresh)
+  assert_eq(bridge.state().rev, 4)
 }
 
 ///|

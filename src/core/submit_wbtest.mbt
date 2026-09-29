@@ -24,6 +24,88 @@ test "submit: successful submission lifecycle" {
   assert_eq(form.submission_attempts(), 1)
 }
 
+// -- submission identity guards (0.8.7 audit) ----------------------------------
+
+///|
+test "submit: a reset mid-flight discards the async completion" {
+  let clock = VirtualClock::make()
+  let form = FormApi::make({ name: "test", surname: "", age: 0, }).with_clock(
+    clock.clock(),
+  )
+  form.handle_submit(submit_options={
+    ..SubmitOptions::make(),
+    on_submit: Some(
+      submit_handler((_values, done) => {
+        let _ = clock.schedule(50, () => done(Ok))
+      }),
+    ),
+  })
+  assert_true(form.is_submitting()) // in flight
+  form.reset() // supersedes the in-flight submission
+  clock.run_all()
+  // the completion landed on a reset form: discarded, no phantom success
+  assert_false(form.is_submitting())
+  assert_false(form.is_submitted())
+  assert_false(form.is_submit_successful())
+  assert_eq(form.submission_attempts(), 0)
+}
+
+///|
+test "submit: a newer submission supersedes the older async completion" {
+  let clock = VirtualClock::make()
+  let form = FormApi::make({ name: "test", surname: "", age: 0, }).with_clock(
+    clock.clock(),
+  )
+  let finished = { n: 0, }
+  form.handle_submit(submit_options={
+    ..SubmitOptions::make(),
+    on_submit: Some(
+      submit_handler((_values, done) => {
+        let _ = clock.schedule(50, () => {
+          finished.n = finished.n + 1
+          done(Err("first"))
+        })
+      }),
+    ),
+  })
+  form.handle_submit(submit_options={
+    ..SubmitOptions::make(),
+    on_submit: Some(
+      submit_handler((_values, done) => {
+        let _ = clock.schedule(100, () => {
+          finished.n = finished.n + 1
+          done(Ok)
+        })
+      }),
+    ),
+  })
+  clock.run_all()
+  // both handlers ran, but only the LATEST submission's completion applies
+  assert_eq(finished.n, 2)
+  assert_true(form.is_submit_successful()) // the second submission's Ok
+  assert_eq(form.submit_error(), None) // the first submission's Err discarded
+}
+
+///|
+test "submit: prevented mid-flight no longer decrements a reset counter" {
+  let clock = VirtualClock::make()
+  let form = FormApi::make({ name: "test", surname: "", age: 0, }).with_clock(
+    clock.clock(),
+  )
+  form.handle_submit(submit_options={
+    ..SubmitOptions::make(),
+    on_submit: Some(
+      submit_handler((_values, done) => {
+        let _ = clock.schedule(50, () => done(Prevented))
+      }),
+    ),
+  })
+  form.reset() // attempts back to default (0); the completion is stale
+  clock.run_all()
+  // the stale Preverted must not decrement the reset counter below zero
+  assert_eq(form.submission_attempts(), 0)
+}
+
 // upstream: "should call onSubmitInvalid when submitted with an error"
 
 ///|

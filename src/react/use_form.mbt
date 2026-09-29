@@ -7,9 +7,9 @@
 /// Subscribe a form bridge to the component and return its snapshot.
 pub fn[V] use_form(bridge : FormBridge[V]) -> FormState {
   let handle = use_form_handle(bridge)
-  let subscribe : (() -> Unit) -> () -> Unit = notify => {
-    handle.subscribe(notify)
-  }
-  let get_snapshot : () -> FormState = () => handle.get_snapshot()
-  @tiye_react.use_sync_external_store(subscribe, get_snapshot)
+  // handle.subscribe_fn is identity-stable across renders (the hook struct
+  // is created once per component) — React's external-store contract
+  @tiye_react.use_sync_external_store(handle.subscribe_fn, () => {
+    handle.get_snapshot()
+  })
 }

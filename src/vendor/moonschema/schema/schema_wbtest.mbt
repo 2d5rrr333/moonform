@@ -397,6 +397,40 @@ test "format: 默认 annotation, 开启 assert_format 后断言" {
 }
 
 ///|
+/// 回归（moonform vendor 修复）：含增补平面字符（emoji）的 email/uuid
+/// 输入曾因 UTF-16 长度 × 码点数组下标混用而越界 abort——统一按码点
+/// 遍历后它们只是普通的非法输入。
+test "format: 增补平面字符不 abort（统一码点遍历）" {
+  let se =
+    #|{ "type": "string", "format": "email" }
+  let asserting = compile(
+    p(se),
+    options=CompileOptions::new(assert_format=true),
+  )
+  // "user🙂@example.com": 旧代码在第二趟循环按 UTF-16 长度越界 abort；
+  // 修复后按简化规则合法（本地部分允许任意非空白字符）——重点是永不 abort
+  inspect(asserting.check(Json::string("user🙂@example.com")), content="true")
+  inspect(asserting.check(Json::string("a🙂")), content="false")
+  let su =
+    #|{ "type": "string", "format": "uuid" }
+  let uuid_schema = compile(
+    p(su),
+    options=CompileOptions::new(assert_format=true),
+  )
+  // exactly 36 UTF-16 units (18 emoji) passed the OLD length gate and
+  // then aborted indexing the 18-codepoint array — false, never an abort
+  inspect(
+    uuid_schema.check(
+      Json::string(
+        "🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂",
+      ),
+    ),
+    content="false",
+  )
+  inspect(uuid_schema.check(Json::string("🙂")), content="false")
+}
+
+///|
 /// 回归：core JSON 解析器整数路径在 |n| >= 2^53 误产出 Infinity，
 /// `parse` 用 repr 重解析修复（见 api.mbt / fix_integer_overflow）。
 test "2^53 整数溢出修复后 const 按值相等" {

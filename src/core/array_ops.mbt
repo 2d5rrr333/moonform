@@ -83,9 +83,33 @@ pub fn[V, A] FormApi::insert_value(
     },
     dont_update_meta=dont_update_meta.unwrap_or(false),
   )
+  // slots at and above i shifted: element-addressed subscribers refresh
+  self.notify_structural_change(lens.key)
 }
 
 // -- array-op remap wrappers ---------------------------------------------------
+
+///|
+/// Notify every subscriber of a structural change under `prefix`: all
+/// per-slot keys are notified (Meta) in one batch — element-addressed
+/// subscribers (field/group bridges) refresh their snapshots even though
+/// their own key was never written (swap/move/remove shifted a DIFFERENT
+/// slot's data onto their position). Batched so each subscriber fires at
+/// most once per operation.
+fn[V] FormApi::notify_structural_change(
+  self : FormApi[V],
+  prefix : Key,
+) -> Unit {
+  let ks = self.meta.keys_under(prefix)
+  if ks.length() == 0 {
+    return
+  }
+  self.subs.batch(() => {
+    for k in ks {
+      self.subs.notify(k, Meta)
+    }
+  })
+}
 
 ///|
 /// Meta remap for remove(i) + group ownership migration (distributed-error
@@ -166,6 +190,9 @@ pub fn[V, A] FormApi::remove_value(
   )
   // delete the vacated last slot (upstream deletes `${field}[${lastIndex}]`)
   self.delete_field(lens.key.push_idx(last_index))
+  // every surviving slot's data shifted: element-addressed subscribers
+  // refresh even though their key was never written
+  self.notify_structural_change(lens.key)
 }
 
 ///|
@@ -197,6 +224,8 @@ pub fn[V, A] FormApi::swap_values(
     },
     dont_update_meta=dont_update_meta.unwrap_or(false),
   )
+  // both swapped slots' data moved: element-addressed subscribers refresh
+  self.notify_structural_change(lens.key)
 }
 
 ///|
@@ -231,6 +260,9 @@ pub fn[V, A] FormApi::move_value(
     },
     dont_update_meta=dont_update_meta.unwrap_or(false),
   )
+  // every slot between from and to shifted: element-addressed subscribers
+  // refresh
+  self.notify_structural_change(lens.key)
 }
 
 ///|
@@ -271,4 +303,8 @@ pub fn[V, A] FormApi::clear_values(
     dont_update_meta=dont_update_meta.unwrap_or(false),
   )
   self.meta.bump_array_version(lens.key)
+  // every slot is gone: element-addressed subscribers refresh (their
+  // lenses now read stale — the structural-change contract has adapters
+  // re-mount per slot)
+  self.notify_structural_change(lens.key)
 }

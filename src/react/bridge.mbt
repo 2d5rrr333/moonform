@@ -14,12 +14,18 @@
 /// A stable per-field snapshot for React rendering: rebuilt when the core
 /// notifies, identity-stable between notifications.
 pub struct FieldState[A] {
-  /// Current field value.
+  /// Current field value. After a structural array change removed the
+  /// field's slot, this keeps the last live value (the lens address is
+  /// stale — the structural-change contract has adapters re-mount per
+  /// slot; `array_version` on the ARRAY field's snapshot is the signal).
   value : A
   /// Flattened error messages (lifecycle order).
   errors : Array[String]
   is_touched : Bool
   is_blurred : Bool
+  /// Derived dirty: the current value differs from the form default
+  /// (upstream `isDirty` semantics — NOT the sticky stored flag). A stale
+  /// slot vs a live slot is dirty (the field moved).
   is_dirty : Bool
   is_validating : Bool
   is_valid : Bool
@@ -43,32 +49,51 @@ pub struct FieldBridge[V, A] {
 }
 
 ///|
-pub fn[V, A] FieldBridge::make(
+pub fn[V, A : Eq] FieldBridge::make(
   form : @core.FormApi[V],
   lens : @core.Lens[V, A],
 ) -> FieldBridge[V, A] {
   {
     form,
     lens,
-    snapshot: build_snapshot(form, lens, 0),
+    snapshot: build_snapshot(form, lens, 0, lens.try_get(form.values())),
     sub_id: None,
     notify: None,
   }
 }
 
 ///|
-fn[V, A] build_snapshot(
+fn[V, A : Eq] build_snapshot(
   form : @core.FormApi[V],
   lens : @core.Lens[V, A],
   rev : Int,
+  stale_fallback : A?,
 ) -> FieldState[A] {
   let meta = form.field_meta(lens.key)
+  // stale array slot: keep the last live value (never abort on the
+  // out-of-range index — the core's try_get contract)
+  let value = match lens.try_get(form.values()) {
+    Some(v) => v
+    None =>
+      match stale_fallback {
+        Some(v) => v
+        None => form.get_value(lens) // never stale at construction
+      }
+  }
+  let cur_opt = lens.try_get(form.values())
+  let def_opt = lens.try_get(form.default_values())
+  let is_dirty = match (cur_opt, def_opt) {
+    (Some(cur), Some(def)) => cur != def
+    (None, None) => false
+    // a stale slot vs a live slot (or vice versa): the field moved — dirty
+    _ => true
+  }
   {
-    value: form.get_value(lens),
+    value,
     errors: meta.errors(),
     is_touched: meta.is_touched,
     is_blurred: meta.is_blurred,
-    is_dirty: meta.is_dirty,
+    is_dirty,
     is_validating: meta.is_validating,
     is_valid: meta.is_valid(),
     array_version: meta.array_version,
@@ -77,12 +102,25 @@ fn[V, A] build_snapshot(
 }
 
 ///|
+/// Rebuild the snapshot from the core WITHOUT notifying React — used on
+/// attach so a re-attached bridge reads fresh state (the core may have
+/// changed while detached).
+fn[V, A : Eq] FieldBridge::rebuild(self : FieldBridge[V, A]) -> Unit {
+  let stale_fallback : A? = Some(self.snapshot.value)
+  self.snapshot = build_snapshot(
+    self.form,
+    self.lens,
+    self.snapshot.rev + 1,
+    stale_fallback,
+  )
+}
+
+///|
 /// Refresh the snapshot from the core (bumps rev) and notify React that
 /// the store changed (schedules a re-render). Called on every core
 /// notification for this field.
-pub fn[V, A] FieldBridge::refresh(self : FieldBridge[V, A]) -> Unit {
-  let next_rev = self.snapshot.rev + 1
-  self.snapshot = build_snapshot(self.form, self.lens, next_rev)
+pub fn[V, A : Eq] FieldBridge::refresh(self : FieldBridge[V, A]) -> Unit {
+  self.rebuild()
   match self.notify {
     Some(cb) => cb()
     None => ()
@@ -98,11 +136,12 @@ pub fn[V, A] FieldBridge::state(self : FieldBridge[V, A]) -> FieldState[A] {
 ///|
 /// Subscribe the bridge to its field's changes WITHOUT a React notify
 /// callback (headless mode; refreshes snapshots only). For React wiring
-/// prefer `attach_with_notify`.
-pub fn[V, A] FieldBridge::attach(self : FieldBridge[V, A]) -> Unit {
+/// prefer `attach_with_notify`. Re-attaching rebuilds the snapshot — the
+/// core may have changed while detached.
+pub fn[V, A : Eq] FieldBridge::attach(self : FieldBridge[V, A]) -> Unit {
   match self.sub_id {
     Some(_) => () // already attached
-    None =>
+    None => {
       self.sub_id = Some(
         self.form.subscribe_field(
           self.lens.key,
@@ -110,6 +149,8 @@ pub fn[V, A] FieldBridge::attach(self : FieldBridge[V, A]) -> Unit {
           () => self.refresh(),
         ),
       )
+      self.rebuild()
+    }
   }
 }
 
@@ -117,7 +158,7 @@ pub fn[V, A] FieldBridge::attach(self : FieldBridge[V, A]) -> Unit {
 /// Subscribe with React's notify callback (use_sync_external_store
 /// contract): every core change refreshes the snapshot AND schedules a
 /// React re-render.
-pub fn[V, A] FieldBridge::attach_with_notify(
+pub fn[V, A : Eq] FieldBridge::attach_with_notify(
   self : FieldBridge[V, A],
   notify : () -> Unit,
 ) -> Unit {

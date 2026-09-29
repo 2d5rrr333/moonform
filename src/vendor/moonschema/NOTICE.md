@@ -10,6 +10,10 @@
    `implicit_impl_as_method` 弃用策略，为全部 `derive(...)`/显式 `impl` 类型追加
    `pub extend T with Trait::{...}` 声明（`schema/types.mbt`、`rules/expr.mbt`、
    `rules/lexer.mbt`）。纯机械迁移，不改变任何行为语义；上游升级工具链后可对齐回上游。
-2. 包清单 `moon.pkg` 按本仓库模块路径（`2d5rrr333/moonform/vendor/...`）调整。
+2. **format 断言崩溃修复（2026-09-29，moonform）**：`schema/format.mbt` 的
+   `is_email`/`is_uuid` 混用 `String::length()`（UTF-16 单元数）与
+   `to_array()`（码点数组）——含增补平面字符（emoji）的输入越界 abort。
+   统一按码点遍历。行为差异仅在原本崩溃的输入上。
+3. 包清单 `moon.pkg` 按本仓库模块路径（`2d5rrr333/moonform/vendor/...`）调整。
 
 除此以外未做任何修改；上游发布到 mooncakes 后本 vendor 将整体移除（见根 README 致谢）。

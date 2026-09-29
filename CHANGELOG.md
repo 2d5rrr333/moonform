@@ -5,6 +5,90 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-09-29
+
+### Fixed
+
+The third audit round — the adapter layer (react bridges, schema
+adapter, rules) had none of the core's 0.8.5 staleness guards:
+
+- **FieldBridge/GroupBridge snapshots aborted on stale array slots**
+  (crash): snapshot builders read through `lens.get`/`group.value()` —
+  after `remove_value` shrank the array, the structural notification
+  refreshed the bridge straight into an index-out-of-range abort. Both
+  read through `try_get`/the new `FormGroupApi::try_value` and keep the
+  last live value on a stale slot (the structural-change contract has
+  adapters re-mount per slot)
+- **Element-addressed bridges never refreshed on structural changes**:
+  swap/move/remove/insert shift a DIFFERENT slot's data onto a bridge's
+  position without writing its key — snapshots stayed silently stale.
+  Array operations now batch-notify every per-slot key under the array
+  (one callback per subscriber), mirroring upstream's per-field meta
+  touch
+- **The hooks' subscribe closures were unstable across renders**
+  (React contract): `use_field`/`use_group`/`use_form` built a fresh
+  closure every render, re-subscribing each commit and opening detach
+  windows where cross-component writes were missed entirely (stale UI
+  until the next core change). The hook structs now carry an
+  identity-stable `subscribe_fn`; the web demos use it directly
+- **Re-attached bridges served stale snapshots**: attach subscribed but
+  never rebuilt, so a bridge surviving detach (StrictMode remounts,
+  ref-held bridges) rendered pre-detach state after re-attaching. All
+  three bridges rebuild on attach (no notify — no re-render storm)
+- **`FormState.is_validating` never lit up**: it read the default-state
+  overlay, which no validator writes. It now reads the new public
+  `FormApi::is_validating_any` (field meta + in-flight group asyncs)
+- **`FieldState.is_dirty` was a sticky flag, not derived**: writing a
+  value and manually reverting it left dirty=true forever (upstream
+  derives isDirty by value comparison). The snapshot now derives it
+  (FieldBridge gains an `A : Eq` bound — the documented
+  derive(Eq)-your-values contract)
+- **Group unmount never notified the group's key**: prefix subscribers
+  (GroupBridge) kept the pre-unmount group errors in their snapshots.
+  Unmount now notifies the group key after clearing its state
+- **Async submit completions landed on superseded submissions**: a reset
+  mid-flight resurrected success/error state on the reset form (and a
+  stale `Prevented` decremented the reset counter below zero); a newer
+  submission's completion could be overwritten by the older one's late
+  finish. Submissions now carry an identity (a monotonic seq bumped by
+  every submit and by reset); only the active submission's completion
+  applies
+- **real_clock `now` overflowed Int** (Date.now() ms ≈ 2^40 truncated):
+  now returns wall-clock seconds (fits Int until 2038; diagnostics
+  only — the core never reads it). **setTimeout ids**: Node/Bun return
+  Timeout OBJECTS, violating the Int return slot — schedule now hands
+  out its own increasing numeric ids behind a registry (browsers and
+  Node identical)
+- **schema adapter: JSON-Pointer escapes ignored**: `~0`/`~1` were
+  never unescaped (property names containing `~`/`/` never received
+  their errors; the field matcher compared raw names against escaped
+  paths — both sides now escape/unescape per RFC 6901). All-digit
+  segments with leading zeros ("01") or 9+ digits (phone-number keys)
+  wrapped/overflowed into bogus array indices — only canonical indices
+  (no leading zero, ≤ 9 digits) map to `Idx` now, mirroring moonschema's
+  own pointer parser. `quoted_property` sliced by UTF-16 offsets against
+  codepoint indices (emoji property names garbled) — rebuilt from the
+  codepoint array
+- **vendored moonschema format asserts aborted on supplementary-plane
+  characters**: `is_email`/`is_uuid` mixed `String::length()` (UTF-16
+  units) with `to_array()` indexing (codepoints) — pasting an emoji
+  into an `assert_format` email/uuid field aborted. Unified to codepoint
+  iteration; NOTICE.md updated (vendored-file disclosure)
+- **rules**: `numeric("-")` accepted a bare sign (at least one digit
+  required now); `min_length`/`max_length` counted UTF-16 units while
+  the schema engine counts codepoints (an emoji now counts as one
+  character, consistent with minLength semantics and the extreme-input
+  tests' documented contract); `non_blank` now treats U+00A0, U+3000
+  (CJK ideographic space) and \x0B/\x0C as blank; email doc aligned
+  with the code (TLD ≥ 2)
+
+### Tests
+
+- 367 tests on js, 335 on wasm (+17: bridge × array ops, derived dirty,
+  live validating, attach_with_notify, group-unmount refresh, submit
+  identity guards, pointer escapes/indices, format emoji regression,
+  rules unicode/numeric edges)
+
 ## [0.8.6] - 2026-09-29
 
 ### Fixed

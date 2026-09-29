@@ -4,8 +4,12 @@
 
 ///|
 /// The per-component hook state: wraps a bridge bound to the whole form.
-pub struct FormBridgeHook[V] {
+pub(all) struct FormBridgeHook[V] {
   bridge : FormBridge[V]
+  /// Stable subscribe function (identity survives every render — React's
+  /// external-store contract: an unstable identity would re-subscribe on
+  /// every render, opening detach windows where changes are missed).
+  subscribe_fn : (() -> Unit) -> () -> Unit
 }
 
 ///|
@@ -13,7 +17,13 @@ pub struct FormBridgeHook[V] {
 /// with `use_memo_deps` or a ref). The returned handle drives
 /// `use_sync_external_store`.
 pub fn[V] use_form_handle(bridge : FormBridge[V]) -> FormBridgeHook[V] {
-  { bridge, }
+  {
+    bridge,
+    subscribe_fn: notify => {
+      bridge.attach_with_notify(notify)
+      () => bridge.detach()
+    },
+  }
 }
 
 ///|
@@ -24,8 +34,7 @@ pub fn[V] FormBridgeHook::subscribe(
   self : FormBridgeHook[V],
   notify : () -> Unit,
 ) -> () -> Unit {
-  self.bridge.attach_with_notify(notify)
-  () => self.bridge.detach()
+  (self.subscribe_fn)(notify)
 }
 
 ///|

@@ -103,16 +103,14 @@ fn login_component(props : LoginProps) -> @react.VirtualNode {
   // subscribe bridges through React's external-store contract so this
   // component re-renders when field state changes
   ignore(
-    @react.use_sync_external_store(
-      notify => st.email_handle.subscribe(notify),
-      () => st.email_handle.get_snapshot(),
-    ),
+    @react.use_sync_external_store(st.email_handle.subscribe_fn, () => {
+      st.email_handle.get_snapshot()
+    }),
   )
   ignore(
-    @react.use_sync_external_store(
-      notify => st.password_handle.subscribe(notify),
-      () => st.password_handle.get_snapshot(),
-    ),
+    @react.use_sync_external_store(st.password_handle.subscribe_fn, () => {
+      st.password_handle.get_snapshot()
+    }),
   )
   @react.div(class_name="login-card", [
     @react.h2([@react.VirtualNode::Text("Sign in")]),

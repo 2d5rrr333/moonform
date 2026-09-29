@@ -67,6 +67,11 @@ pub struct FormApi[V] {
   /// isValidating across all async validators, groups included; fields
   /// record theirs in meta). Maintained by FormGroupApi::set_validating.
   mut validating_groups : Int
+  /// Active submission identity: bumped by every handle_submit and by
+  /// reset — an async submit handler's completion applies only while it
+  /// is still the active submission (a reset or a newer submission
+  /// supersedes it).
+  mut submit_seq : Int
   /// Per-field onSubmit validator dispatch (mounted fields only).
   submit_validators : Map[Key, (V) -> Unit]
   /// Dependency watches (upstream onChangeListenTo): value-change of key K
@@ -111,6 +116,7 @@ pub fn[V] FormApi::make(
     clock: None,
     submit_error: None,
     validating_groups: 0,
+    submit_seq: 0,
     submit_validators: Map([]),
     dep_watches: Map([]),
     group_regs: Map([]),
@@ -377,6 +383,9 @@ pub fn[V] FormApi::reset(
   values? : V,
   keep_default_values? : Bool,
 ) -> Unit {
+  // a reset supersedes every in-flight submission: async submit
+  // completions must not land on the freshly reset state
+  self.submit_seq = self.submit_seq + 1
   // abort in-flight async validation on mounted fields first: completions
   // must not land on the freshly reset state. Snapshot — abort notifies,
   // whose callbacks may mount/unmount fields mid-loop.

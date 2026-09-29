@@ -169,6 +169,7 @@ pub struct FormApi[V] {
   mut clock : Clock?
   mut submit_error : String?
   mut validating_groups : Int
+  mut submit_seq : Int
   submit_validators : Map[Key, (V) -> Unit]
   dep_watches : Map[Key, Map[Key, () -> Unit]]
   group_regs : Map[Key, GroupReg[V]]
@@ -198,6 +199,7 @@ pub fn[V] FormApi::is_submitting(Self[V]) -> Bool
 pub fn[V] FormApi::is_touched(Self[V]) -> Bool
 pub fn[V] FormApi::is_valid_fields(Self[V]) -> Bool
 pub fn[V] FormApi::is_validating(Self[V]) -> Bool
+pub fn[V] FormApi::is_validating_any(Self[V]) -> Bool
 pub fn[V] FormApi::make(V, default_state? : FormDefaultState[V], on_field_unmount? : (Key) -> Unit, on_change? : (Key) -> Unit, on_change_debounce_ms? : Int, on_change_group? : (Key) -> Unit, on_change_group_debounce_ms? : Int) -> Self[V]
 pub fn[V] FormApi::meta_store(Self[V]) -> MetaStore
 pub fn[V, A] FormApi::move_value(Self[V], Lens[V, Array[A]], Int, Int, dont_update_meta? : Bool) -> Unit
@@ -259,6 +261,7 @@ pub fn[V, G] FormGroupApi::mount(Self[V, G]) -> Unit
 pub fn[V, G] FormGroupApi::schedule_async_validation(Self[V, G]) -> Unit
 pub fn[V, G] FormGroupApi::set_value(Self[V, G], G) -> Unit
 pub fn[V, G] FormGroupApi::submission_attempts(Self[V, G]) -> Int
+pub fn[V, G] FormGroupApi::try_value(Self[V, G]) -> G?
 pub fn[V, G] FormGroupApi::unmount(Self[V, G]) -> Unit
 pub fn[V, G] FormGroupApi::validate(Self[V, G], ValidationCause) -> Unit
 pub fn[V, G] FormGroupApi::value(Self[V, G]) -> G
