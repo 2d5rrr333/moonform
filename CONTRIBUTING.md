@@ -8,7 +8,7 @@
 git clone https://github.com/2d5rrr333/moonform.git
 cd moonform
 moon update          # 解析依赖（首次必跑；本机索引偶发滞后时重跑）
-moon test --target js --deny-warn    # 应 379 全绿
+moon test --target js --deny-warn    # 应 380 全绿
 ```
 
 需要 MoonBit 工具链（[安装](https://www.moonbitlang.com/download/)）。

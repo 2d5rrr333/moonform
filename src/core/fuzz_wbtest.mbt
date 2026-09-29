@@ -327,4 +327,10 @@ test "fuzz: array ops × mounts × subscriptions × group distribution" {
   fz_run(7, 400)
   fz_run(42, 400)
   fz_run(20260929, 400)
+  // soak sweep (CI-budgeted): one long run over a wide seed range —
+  // each seed is a fresh interleaving; any invariant break aborts with
+  // its seed+step in the message
+  for seed in 100..<132 {
+    fz_run(seed, 400)
+  }
 }

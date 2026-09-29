@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.3] - 2026-09-29
+
+### Added
+
+- **Async randomized fuzz** — the TIME dimension joins the structural
+  fuzz: a deterministic PRNG drives 6,300 interleaved steps (21 seeds ×
+  300) of writes (three verdict classes) × blurs × overlapping async
+  submissions × resets × random clock ticks (0/5/15/60/200ms — debounce
+  windows, completions, and full drains in the mix). Invariants:
+  `is_validating` never sticks once the clock drains; the drained error
+  state reflects exactly the last write's async verdict (debounce
+  coalescing — a mid-flight sync "required" is correctly REPLACED by the
+  async result per single-slot cause semantics); a reset discards every
+  in-flight completion (no `is_submitted`/`is_submitting`/error
+  residue); submission attempts stay monotone and non-negative; only
+  the latest submission's completion applies (identity guard)
+- **Structural fuzz seed soak**: the array/mount/subscription fuzz adds
+  a 32-seed sweep (12,800 steps per run) on top of its fixed seeds
+
+### Tests
+
+- 380 tests on js, 348 on wasm (+1 test, two fuzz families inside)
+
 ## [0.9.2] - 2026-09-29
 
 ### Fixed
