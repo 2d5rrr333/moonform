@@ -55,7 +55,7 @@ test "validation: onBlur runs when field is blurred" {
 ///|
 test "validation: blur does not trigger onChange validators" {
   let form = FormApi::make({ name: "other", surname: "", age: 0, })
-  let change_ran = { n: 0, }
+  let change_ran : Count = { n: 0, }
   let field = form.field(
     name_l(),
     on_change_validate=validator(_ => {

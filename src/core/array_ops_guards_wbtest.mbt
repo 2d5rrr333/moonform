@@ -283,6 +283,52 @@ test "group on array element: empty array after clear never aborts" {
 }
 
 ///|
+/// Regression (fuzz-found): clear_values left Mount-cause distributed
+/// errors orphaned on the stale slot metas — a Change re-validation only
+/// clears its own cause's records, so the group stayed invalid forever
+/// (the permanently-blocks-submission class). Clear now vacates every old
+/// slot (meta + registration), mirroring remove_value.
+test "clear_values vacates every slot — no orphaned distributed errors" {
+  let form = FormApi::make({ agnames: ["", "ok", ""], })
+  let names = form.group(
+    ag_names_l(),
+    on_mount_validate=ag_names_required_validator(),
+    on_change_validate=ag_names_required_validator(),
+  )
+  names.mount()
+  // Mount distribution: elements 0 and 2 are invalid
+  assert_true(form.field_meta(ag_names_l().key.push_idx(0)).has_errors())
+  assert_true(form.field_meta(ag_names_l().key.push_idx(2)).has_errors())
+  assert_false(names.is_fields_valid())
+  // clear: every slot is vacated — the distributed errors must not survive
+  // on the stale slot metas
+  form.clear_values(ag_names_l())
+  assert_eq(form.get_value(ag_names_l()).length(), 0)
+  for k in form.meta_store().keys() {
+    assert_false(form.field_meta(k).has_errors())
+  }
+  assert_true(names.is_fields_valid())
+  // the group can submit again immediately
+  let ran = { n: 0, }
+  names.handle_submit(on_group_submit=(_v, _m) => ran.n = ran.n + 1)
+  assert_eq(ran.n, 1)
+}
+
+///|
+/// Per-index required distribution over the string slots themselves.
+fn ag_names_required_validator() -> GroupValidator[Array[String], AgStrings] {
+  group_validator_value(xs => {
+    let errs : Array[(Key, String)] = []
+    for i, x in xs {
+      if x == "" {
+        errs.push((Key::idx(i), "required"))
+      }
+    }
+    GroupValidationResult::fields(errs)
+  })
+}
+
+///|
 test "delete_field notifies every removed key in the subtree" {
   let form = FormApi::make({ agitems: [{ agname: "a", }, { agname: "b", }], })
   let f1 = form.field(ag_name_at(1))

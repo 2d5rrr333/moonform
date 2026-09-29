@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.2] - 2026-09-29
+
+### Fixed
+
+- **`clear_values` orphaned Mount-cause distributed errors** (fuzz-found,
+  the permanently-blocks-submission class): clearing left every old
+  slot's meta in place, and a Change re-validation only clears its own
+  cause's owned records — so errors a group distributed on MOUNT
+  survived on the stale slot keys forever (`is_fields_valid` stayed
+  false; the group could never submit again). Clear now vacates every
+  old slot — meta and registration deleted, subtree notified — mirroring
+  remove_value's treatment of its vacated last slot (clear is remove for
+  every position)
+
+### Added
+
+- **Randomized stress fuzz** (the audits' standing blind spot — several
+  fixed bugs depended on exact map layouts that small deterministic
+  cases pass over): a deterministic PRNG drives 2,400 interleaved steps
+  (6 seeds × 400) of array operations × field mount/unmount (including
+  stale indices) × subscription churn × group error distribution, with
+  invariants asserted after EVERY step — values match a shadow model of
+  the documented clamp/no-op semantics; no negative index ever appears
+  in a meta key; distribution is exact on live slots and absent on stale
+  slots and while the group is unmounted; unsubscribed subscribers never
+  fire. The clear_values orphan above is its first catch
+
+### Tests
+
+- 379 tests on js, 347 on wasm (+2: the fuzz itself and a deterministic
+  clear_values orphan regression)
+
 ## [0.9.1] - 2026-09-29
 
 ### Fixed

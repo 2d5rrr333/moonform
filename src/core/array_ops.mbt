@@ -291,20 +291,27 @@ pub fn[V, A] FormApi::replace_value(
 
 ///|
 /// Clear all values of an array field (upstream `clearFieldValues`); a
-/// no-op value-wise for non-array/empty fields, never throws.
+/// no-op value-wise for non-array/empty fields, never throws. Every old
+/// slot is vacated — its meta and registration go away with the element
+/// (mirroring remove_value's vacated-slot deletion; clear is remove for
+/// every position). Without the per-slot cleanup, Mount-cause distributed
+/// errors on the stale slots survive as orphans (a Change re-validation
+/// only clears its own cause's records) and block the group forever.
 pub fn[V, A] FormApi::clear_values(
   self : FormApi[V],
   lens : Lens[V, Array[A]],
   dont_update_meta? : Bool,
 ) -> Unit {
+  let len = lens.get(self.values).length()
   self.array_op_write(
     lens,
     _xs => [],
     dont_update_meta=dont_update_meta.unwrap_or(false),
   )
+  for i in 0..<len {
+    // delete_field notifies the removed subtree — element-addressed
+    // subscribers see the clear
+    self.delete_field(lens.key.push_idx(i))
+  }
   self.meta.bump_array_version(lens.key)
-  // every slot is gone: element-addressed subscribers refresh (their
-  // lenses now read stale — the structural-change contract has adapters
-  // re-mount per slot)
-  self.notify_structural_change(lens.key)
 }

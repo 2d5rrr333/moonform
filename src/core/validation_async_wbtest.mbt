@@ -63,7 +63,7 @@ test "async validation: debounce collapses rapid changes (validator once)" {
   let form = FormApi::make({ name: "test", surname: "", age: 0, }).with_clock(
     clock.clock(),
   )
-  let runs = { n: 0, }
+  let runs : Count = { n: 0, }
   let field = form.field(
     name_l(),
     on_change_async_debounce_ms=1000,
@@ -90,7 +90,7 @@ test "async validation: debounce window delays the run" {
   let form = FormApi::make({ name: "test", surname: "", age: 0, }).with_clock(
     clock.clock(),
   )
-  let runs = { n: 0, }
+  let runs : Count = { n: 0, }
   let field = form.field(
     name_l(),
     on_change_async_debounce_ms=500,
@@ -119,7 +119,7 @@ test "async validation: onBlur runs with debounce" {
   let form = FormApi::make({ name: "test", surname: "", age: 0, }).with_clock(
     clock.clock(),
   )
-  let runs = { n: 0, }
+  let runs : Count = { n: 0, }
   let field = form.field(
     name_l(),
     on_blur_async_debounce_ms=1000,
